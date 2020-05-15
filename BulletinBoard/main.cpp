@@ -5,8 +5,16 @@
 
 using namespace std;
 
-int main()
+int main(char* command, char* argv[], char* envp[])
 {
-    cout << "!" << endl;
+
+    int child = fork();
+    if (child == 0) {
+        execve(command, argv, envp);
+        cout << "1111" << endl;
+    }
+    else {
+    cout << "222" << endl;
+    }
     return 0;
 }
