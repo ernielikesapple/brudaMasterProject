@@ -18,7 +18,7 @@ public:
 public:
     void sendRequest();
 public:
-    int mutiplierFunctions(int a, int b);
+    char** pointersFunctions(int buffersize);
 public:
     int run_it (char* command, char* argv [], char *envp[]);
 

@@ -44,9 +44,15 @@ int networkClass:: run_it (char* command, char* argv [], char *envp[]) // a func
 }
 
 
-int networkClass:: mutiplierFunctions(int a, int b) // the int is the return type, it can be  void too
+char** networkClass:: pointersFunctions(int buffersize) // the int is the return type, it can be  void too
 {
-    return a * b;
+    char* buffer  = new char[buffersize]; // char is one byte, ask 8 bytes of memory, and returing a pointer to the beginning of that block of memory,
+    memset(buffer,1, buffersize); // fills a block of memory with the data we specify , 1st parameter shows where, second para value, third, how many bytes should it filled
+    
+    char **pointer = &buffer;
+    
+    delete [] buffer;
+    return pointer;
 }
 
 
