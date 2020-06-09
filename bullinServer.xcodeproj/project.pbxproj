@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		561EC92F248DCCBC00DB01AB /* howStringWorks.c in Sources */ = {isa = PBXBuildFile; fileRef = 561EC92E248DCCBC00DB01AB /* howStringWorks.c */; };
 		569F932F248C5D32001742A9 /* networkClass.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 569F932D248C5D32001742A9 /* networkClass.cpp */; };
 		56E88D38248B30C100E4F167 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 56E88D37248B30C100E4F167 /* main.cpp */; };
 /* End PBXBuildFile section */
@@ -24,6 +25,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		561EC92E248DCCBC00DB01AB /* howStringWorks.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = howStringWorks.c; sourceTree = "<group>"; };
 		569F932D248C5D32001742A9 /* networkClass.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = networkClass.cpp; sourceTree = "<group>"; };
 		569F932E248C5D32001742A9 /* networkClass.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = networkClass.hpp; sourceTree = "<group>"; };
 		56E88D34248B30C100E4F167 /* bullinServer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = bullinServer; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -61,6 +63,7 @@
 			isa = PBXGroup;
 			children = (
 				56E88D37248B30C100E4F167 /* main.cpp */,
+				561EC92E248DCCBC00DB01AB /* howStringWorks.c */,
 				569F932E248C5D32001742A9 /* networkClass.hpp */,
 				569F932D248C5D32001742A9 /* networkClass.cpp */,
 			);
@@ -124,6 +127,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				561EC92F248DCCBC00DB01AB /* howStringWorks.c in Sources */,
 				56E88D38248B30C100E4F167 /* main.cpp in Sources */,
 				569F932F248C5D32001742A9 /* networkClass.cpp in Sources */,
 			);

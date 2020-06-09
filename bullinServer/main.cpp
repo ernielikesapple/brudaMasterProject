@@ -3,8 +3,10 @@
 #include <sys/types.h>
 
 #include <sys/wait.h>
-
+#include "howStringWorks.c"
 #include "networkClass.hpp"
+
+#include <string>
 
 using namespace std;
 
@@ -21,30 +23,43 @@ public:
 void Increment(int* value) // example to show what is a references
 {
     //value++; // if pass  *value into this function and without dereference
-    
-    
     /*
     cout << "=="<< *value << "==" << value <<"==" << &value << endl; // the *value is dereference the pointer, and get the value,,,,, the pointer which is an address number,   "&value is address of the integer pointer "int* value"
     *value++;
     cout << "=="<< *value << "==" << *value-- <<"== " << value <<"==" << &value << endl;
     */
     (*value)++; // dereference this integer pointer first and then make value add by one
-    
 }
-
 
 void Increment1(int& value) // pass reference directly
 {
-    
     value++;
-    
 }
 
+void charFunctions(char* thisIsAcharPointer)
+{
+    cout << thisIsAcharPointer << endl;
+}
 
-
+void PassStringAroundFunction (const string& thisIsAcharPointer)       // 🌟const string&, pass the para as an const ref, so that this funciton is read only, and
+{
+    cout << thisIsAcharPointer << endl;
+}
 
 int main(int argc, char** argv)
 {
+    charFunctions("aa");
+    howStringWorks();
+    
+    string thisIsAstring = "thisIsAstring";
+    char* thisIsAstringMadeByCharArray = "thisIsAstring";
+    
+    PassStringAroundFunction(thisIsAstringMadeByCharArray);
+    
+    cout << thisIsAstring <<"==" << thisIsAstringMadeByCharArray  << endl;
+    
+    
+    
     test t;
     t.tesf();
     cout << t.a << endl;
