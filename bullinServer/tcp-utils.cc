@@ -40,7 +40,7 @@ int connectbyportint(const char* host, const unsigned short port) { // host eith
      */
     
     
-    sin.sin_port = (unsigned short)htons(port);
+    sin.sin_port = (unsigned short)htons(port); // 🌟 notice, the difference, in the local machine, le numero de port est en form de  Little Endianet, et in the server is Big endian ,  htons. host to network, convert host endian to network endian, this function works like, if the machine is big endian, then this function will not work, if not, then this function will convert the local little endian format to the big endian format.,  htons and htonl, host to network short, host to network long
     
     // allocate socket:  for the connecting to the server
     sd = socket(PF_INET, type, 0);
