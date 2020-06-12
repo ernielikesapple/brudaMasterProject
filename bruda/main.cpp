@@ -8,6 +8,6 @@ int main()
 
     int u;
     u = connectbyportint("www.googlrrre.com", 80);
-    cout << "Hello worldasd!" << u << endl;
+    cout << "Hello worldawwwwwwsd!" << u << endl;
     return 0;
 }
