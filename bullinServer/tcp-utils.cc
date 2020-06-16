@@ -134,12 +134,24 @@ int controlsocket(const unsigned short port, const int backlog) {
     return passivesockaux(port, backlog, INADDR_LOOPBACK);
 }
 
+
+// https://stackoverflow.com/questions/27494629/how-can-i-use-poll-to-accept-multiple-clients-tcp-server-c
+/* Here is an example using "C" and "select" on Linux:
+
+http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
+
+Here is an example using "poll":
+
+http://www-01.ibm.com/support/knowledgecenter/ssw_ibm_i_71/rzab6/poll.htm
+ */
+
+
 int recv_nonblock (const int sd, char* buf, const size_t max, const int timeout) {
     struct pollfd pollrec;
     pollrec.fd = sd;
     pollrec.events = POLLIN;
     
-    int polled = poll(&pollrec,1,timeout);
+    int polled = poll(&pollrec,1,timeout);  // The poll() API allows the process to wait for an event to occur and to wake up the process when the event occurs.
 
     if (polled == 0)
         return recv_nodata;

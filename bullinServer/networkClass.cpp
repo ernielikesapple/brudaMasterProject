@@ -12,7 +12,8 @@
 
 using namespace std;
 
-networkClass::networkClass() {
+//https://www.youtube.com/watch?v=gyA7uDlazkc how to seperate code into .hpp and .cpp
+networkClass::networkClass() {  // constructor
 
 }
 
