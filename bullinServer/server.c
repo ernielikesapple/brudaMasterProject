@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
      // The listen() function places all incoming connection into a backlog queue
      // until accept() call accepts the connection.
      // Here, we set the maximum size for the backlog queue to 5.
-     listen(sockfd,5);
+     listen(sockfd,5);                                                  // 1st para is th socket discriptor, 2nd is the size of the queue, queue of clients who are ready to connect 
 
      // The accept() call actually accepts an incoming connection
      clilen = sizeof(cli_addr);

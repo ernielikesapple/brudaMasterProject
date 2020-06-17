@@ -127,7 +127,7 @@ int passivesockaux(const unsigned short port, const int backlog, const unsigned 
 }
 
 int passivesocket(const unsigned short port, const int backlog) {
-    return passivesockaux(port, backlog, INADDR_ANY);
+    return passivesockaux(port, backlog, INADDR_ANY);      // INADDR_ANY if use this to the binding part, then it means you are making the socket available to all the IP for the connection
 }
 
 int controlsocket(const unsigned short port, const int backlog) {
