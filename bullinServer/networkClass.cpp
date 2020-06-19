@@ -38,7 +38,7 @@ int networkClass:: run_it (char* command, char* argv [], char *envp[]) // a func
     }
     else {
 
-    waitpid(childp, &status, 0);
+    waitpid(childp, &status, 0);  // para dans waitpid  https://support.sas.com/documentation/onlinedoc/sasc/doc/lr2/waitpid.htm
     cout << "222===" << childp  << "-----" << &status << endl;
     }
     return status;

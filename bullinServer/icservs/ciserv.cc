@@ -139,7 +139,7 @@ int main (int argc, char** argv) {
             return 1;
         }
         
-        // Some data arrived; poll clients and find the first that has
+        // Some data arrived; poll clients and find the first that has  // if new data comes, if could be a new client or it could be the previous communication with previous client
         // something to say:
         int i = 1;
         while (i < open_socks && socks[i].revents != POLLIN)

@@ -53,7 +53,7 @@ void do_client (int sd) {
 void cleanup_zombies (int sig) {
     int status;
     printf("Cleaning up... \n");
-    while (waitpid(-1,&status,WNOHANG) >= 0)
+    while (waitpid(-1,&status,WNOHANG) >= 0)  // if there is a status communicating
         /* NOP */;
 }
 
@@ -72,7 +72,7 @@ int main (int argc, char** argv) {
     }
     printf("Server up and listening on port %d.\n", port);
     
-    signal(SIGCHLD,cleanup_zombies);  // clean up errant children...
+    signal(SIGCHLD,cleanup_zombies);  // clean up errant children...  siganl is a number in the system,eveytime a child process terminate, the parent process will receive a SIGCHLD signal , signal() is a handler, each time child process terminate it will give parent process a signal called SIGCHLD, and then will launch the correpsonding function , signal is used for notifying process of certain event
     
     while (1) {
         // Accept connection:
