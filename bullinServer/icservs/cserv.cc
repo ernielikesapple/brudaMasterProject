@@ -72,8 +72,7 @@ int main (int argc, char** argv) {
     }
     printf("Server up and listening on port %d.\n", port);
     
-    signal(SIGCHLD,cleanup_zombies);  // clean up errant children...  siganl is a number in the system,eveytime a child process terminate, the parent process will receive a SIGCHLD signal , signal() is a handler, each time child process terminate it will give parent process a signal called SIGCHLD, and then will launch the correpsonding function , signal is used for notifying process of certain event
-    
+    signal(SIGCHLD,cleanup_zombies);  // clean up errant children...  siganl is a number in the system,eveytime a child process terminate, the parent process will receive a SIGCHLD signal , signal() is a handler, each time child process terminate it will give parent process a signal called SIGCHLD, and then will launch the correpsonding function , signal is used for notifying process of certain event             //todo: we can use pip too, pip is safer than the signal handler
     while (1) {
         // Accept connection:
         ssock = accept(msock, (struct sockaddr*)&client_addr, &client_addr_len);
