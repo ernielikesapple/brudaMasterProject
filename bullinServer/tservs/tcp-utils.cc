@@ -103,7 +103,7 @@ int passivesocket(const unsigned short port, const int backlog) {
     return passivesockaux(port, backlog, INADDR_ANY);
 }
 
-int controlsocket(const unsigned short port, const int backlog) {
+int controlsocket(const unsigned short port, const int backlog) { // to listen to 127.0.0.1, to listen to the server itself, for dynamically change the server configuration
     return passivesockaux(port, backlog, INADDR_LOOPBACK);
 }
 

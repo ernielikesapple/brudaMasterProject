@@ -69,10 +69,10 @@ int main (int argc, char** argv) {
     printf("Server up and listening on port %d.\n", port);
 
     // Setting up the thread creation:
-    pthread_t tt;
-    pthread_attr_t ta;
+    pthread_t tt;                       // thread id
+    pthread_attr_t ta;                  // thread attribute, need to initialize it
     pthread_attr_init(&ta);
-    pthread_attr_setdetachstate(&ta,PTHREAD_CREATE_DETACHED);
+    pthread_attr_setdetachstate(&ta,PTHREAD_CREATE_DETACHED);  // usually the thread is attached with parents, that means , a child thread is never going to terminate until the parent wait for(join) it, , after it detached from the parent , the parent can not wait for it(join it), if parent exit, the child will continue exit
     
     while (1) {
         // Accept connection:
@@ -84,7 +84,7 @@ int main (int argc, char** argv) {
         }
         
         // Create thread instead of fork:
-        if ( pthread_create(&tt, &ta, (void* (*) (void*))do_client, (void*)ssock) != 0 ) {
+        if ( pthread_create(&tt, &ta, (void* (*) (void*))do_client, (void*)ssock) != 0 ) {         // pthread_create takes three para, 1st address of thread id, 2nd, address of thread attribute, each thread also need a main function,function pointer,  4th para is the para for the function, (void*) is casted as a void pointer
             perror("pthread_create");
             return 1;
         }

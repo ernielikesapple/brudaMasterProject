@@ -80,7 +80,7 @@ void* do_client (int sd) {
 
     printf("Incoming client...\n");
     // monitor code begins
-    pthread_mutex_lock(&mon.mutex);
+    pthread_mutex_lock(&mon.mutex);                    //  when u define a mutex, you will define a critical region
     mon.con_cur++;
     pthread_mutex_unlock(&mon.mutex);
     // monitor code ends
@@ -155,7 +155,7 @@ int main (int argc, char** argv) {
 
     while (1) {
         // Accept connection:
-        ssock = accept(msock, (struct sockaddr*)&client_addr, &client_addr_len);
+        ssock = accept(msock, (struct sockaddr*)&client_addr, &client_addr_len);   //  the return value is a socket
         if (ssock < 0) {
             if (errno == EINTR) continue;
             perror("accept");
