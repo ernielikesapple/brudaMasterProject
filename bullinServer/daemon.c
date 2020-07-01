@@ -4,6 +4,10 @@
 //
 //  Created by Ernie on 2020-06-28.
 //  Copyright © 2020 Ernie. All rights reserved.
+
+
+// run the process directly in the back ground http://fibrevillage.com/sysadmin/253-how-to-put-running-process-to-background-on-linux
+
 // code template: https://stackoverflow.com/questions/17954432/creating-a-daemon-in-linux
 // https://github.com/pasce/daemon-skeleton-linux-c
 // for debugging: http://www.enderunix.org/docs/eng/daemon.php log into a file, since it's a background process we can not see the log, we need to log it into a file
