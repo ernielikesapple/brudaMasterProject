@@ -11,6 +11,8 @@
 		561EC931248FDEB500DB01AB /* hoeStructWorks.c in Sources */ = {isa = PBXBuildFile; fileRef = 561EC930248FDEB500DB01AB /* hoeStructWorks.c */; };
 		561EC934248FF33F00DB01AB /* tcp-utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 561EC933248FF33F00DB01AB /* tcp-utils.cc */; };
 		561EC93A24A9718400DB01AB /* daemon.c in Sources */ = {isa = PBXBuildFile; fileRef = 561EC93924A9718400DB01AB /* daemon.c */; };
+		561EC93E24AFFC0A00DB01AB /* realDaemon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 561EC93C24AFFC0A00DB01AB /* realDaemon.cpp */; };
+		561EC94424AFFD7500DB01AB /* olderMain.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 561EC94224AFFD7500DB01AB /* olderMain.cpp */; };
 		569F932F248C5D32001742A9 /* networkClass.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 569F932D248C5D32001742A9 /* networkClass.cpp */; };
 		56E88D38248B30C100E4F167 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 56E88D37248B30C100E4F167 /* main.cpp */; };
 /* End PBXBuildFile section */
@@ -37,6 +39,12 @@
 		561EC937249E6CB300DB01AB /* tservs */ = {isa = PBXFileReference; lastKnownFileType = folder; path = tservs; sourceTree = "<group>"; };
 		561EC93824A9718400DB01AB /* daemon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = daemon.h; sourceTree = "<group>"; };
 		561EC93924A9718400DB01AB /* daemon.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = daemon.c; sourceTree = "<group>"; };
+		561EC93B24AE2C1E00DB01AB /* config */ = {isa = PBXFileReference; lastKnownFileType = folder; path = config; sourceTree = "<group>"; };
+		561EC93C24AFFC0A00DB01AB /* realDaemon.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = realDaemon.cpp; sourceTree = "<group>"; };
+		561EC93D24AFFC0A00DB01AB /* realDaemon.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = realDaemon.hpp; sourceTree = "<group>"; };
+		561EC94224AFFD7500DB01AB /* olderMain.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = olderMain.cpp; sourceTree = "<group>"; };
+		561EC94324AFFD7500DB01AB /* olderMain.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = olderMain.hpp; sourceTree = "<group>"; };
+		561EC95824B0006300DB01AB /* bbserv.conf  */ = {isa = PBXFileReference; lastKnownFileType = text; path = "bbserv.conf "; sourceTree = "<group>"; };
 		569F932D248C5D32001742A9 /* networkClass.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = networkClass.cpp; sourceTree = "<group>"; };
 		569F932E248C5D32001742A9 /* networkClass.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = networkClass.hpp; sourceTree = "<group>"; };
 		56E88D34248B30C100E4F167 /* bullinServer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = bullinServer; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -73,12 +81,18 @@
 		56E88D36248B30C100E4F167 /* bullinServer */ = {
 			isa = PBXGroup;
 			children = (
+				561EC93B24AE2C1E00DB01AB /* config */,
 				561EC937249E6CB300DB01AB /* tservs */,
 				561EC936249A7DCB00DB01AB /* triv_client */,
 				561EC935249A7DB700DB01AB /* icservs */,
 				561EC932248FF33F00DB01AB /* tcp-utils.h */,
 				561EC933248FF33F00DB01AB /* tcp-utils.cc */,
 				56E88D37248B30C100E4F167 /* main.cpp */,
+				561EC95824B0006300DB01AB /* bbserv.conf  */,
+				561EC93C24AFFC0A00DB01AB /* realDaemon.cpp */,
+				561EC93D24AFFC0A00DB01AB /* realDaemon.hpp */,
+				561EC94224AFFD7500DB01AB /* olderMain.cpp */,
+				561EC94324AFFD7500DB01AB /* olderMain.hpp */,
 				561EC92E248DCCBC00DB01AB /* howStringWorks.c */,
 				561EC930248FDEB500DB01AB /* hoeStructWorks.c */,
 				569F932E248C5D32001742A9 /* networkClass.hpp */,
@@ -146,6 +160,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				561EC93E24AFFC0A00DB01AB /* realDaemon.cpp in Sources */,
+				561EC94424AFFD7500DB01AB /* olderMain.cpp in Sources */,
 				561EC934248FF33F00DB01AB /* tcp-utils.cc in Sources */,
 				561EC931248FDEB500DB01AB /* hoeStructWorks.c in Sources */,
 				561EC92F248DCCBC00DB01AB /* howStringWorks.c in Sources */,
