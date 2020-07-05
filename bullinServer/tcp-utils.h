@@ -139,5 +139,12 @@ int recv_nonblock (const int, char*, const size_t, const int);
  */
 int readline(const int, char*, const size_t);
 
+
+/*
+ * print help for the command line switches
+ */
+
+void printhelpFunction(void);
+
 #endif /* __TCP_UTILS_H */
 

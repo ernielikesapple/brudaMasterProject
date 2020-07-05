@@ -212,7 +212,7 @@ static void daemonize()
 /**
  * \brief Print help for this application
  */
-void print_help(void)
+private void print_help1(void)
 {
     printf("\n Usage: %s [OPTIONS]\n\n", app_name);
     printf("  Options:\n");
@@ -261,10 +261,10 @@ int main12(int argc, char *argv[])
                 start_daemonized = 1;
                 break;
             case 'h':
-                print_help();
+                print_help1();
                 return EXIT_SUCCESS;
             case '?':
-                print_help();
+                print_help1();
                 return EXIT_FAILURE;
             default:
                 break;

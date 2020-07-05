@@ -45,6 +45,8 @@
 		561EC94224AFFD7500DB01AB /* olderMain.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = olderMain.cpp; sourceTree = "<group>"; };
 		561EC94324AFFD7500DB01AB /* olderMain.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = olderMain.hpp; sourceTree = "<group>"; };
 		561EC95824B0006300DB01AB /* bbserv.conf  */ = {isa = PBXFileReference; lastKnownFileType = text; path = "bbserv.conf "; sourceTree = "<group>"; };
+		561EC95924B1390100DB01AB /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		561EC95A24B1695800DB01AB /* bbfile */ = {isa = PBXFileReference; lastKnownFileType = text; path = bbfile; sourceTree = "<group>"; };
 		569F932D248C5D32001742A9 /* networkClass.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = networkClass.cpp; sourceTree = "<group>"; };
 		569F932E248C5D32001742A9 /* networkClass.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = networkClass.hpp; sourceTree = "<group>"; };
 		56E88D34248B30C100E4F167 /* bullinServer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = bullinServer; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -87,7 +89,9 @@
 				561EC935249A7DB700DB01AB /* icservs */,
 				561EC932248FF33F00DB01AB /* tcp-utils.h */,
 				561EC933248FF33F00DB01AB /* tcp-utils.cc */,
+				561EC95A24B1695800DB01AB /* bbfile */,
 				56E88D37248B30C100E4F167 /* main.cpp */,
+				561EC95924B1390100DB01AB /* Makefile */,
 				561EC95824B0006300DB01AB /* bbserv.conf  */,
 				561EC93C24AFFC0A00DB01AB /* realDaemon.cpp */,
 				561EC93D24AFFC0A00DB01AB /* realDaemon.hpp */,

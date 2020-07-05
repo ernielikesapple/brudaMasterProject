@@ -7,6 +7,7 @@
  */
 
 #include "tcp-utils.h"
+#include <stdio.h>
 
 int connectbyport(const char* host, const char* port) {
     return connectbyportint(host,(unsigned short)atoi(port));
@@ -183,4 +184,21 @@ int readline(const int fd, char* buf, const size_t max) {
     }
     buf[i] = '\0';
     return i;
+}
+
+
+void printhelpFunction(void)
+{
+    printf("\n Usage: [OPTIONS] [Argh]\n\n");
+    printf("  Options:\n");
+    printf("   -b arg  (string)       overrides (or sets) the file name bbfile according to its argument\n");
+    printf("   -c arg  (string)       overrides (or sets) the file name bbserv.conf  according to its argument\n");
+    printf("   -T arg  (int)          overrides Tmax according to its argument\n");
+    printf("   -t arg  (int)          overrides Tmax according to its argument\n");
+    printf("   -p arg  (int)          overrides the port number bp according to its argument \n");
+    printf("   -s arg  (int)          overrides the port number sp according to its argument \n");
+    printf("   -f                     (with no argument) forces d to false or 0 \n");
+    printf("   -d                     (with no argument) forces D to true or 1 \n");
+    printf("   host:port              Any non-switch argument is further interpreted as a peer specification (and so must have the form host:port as explained above) \n");
+    printf("\n");
 }
