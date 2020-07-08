@@ -30,7 +30,6 @@ int main(int argc, char** argv) {
     // Retrieve the (non-option) argument:
     if ( (argc <= 1) || (argv[argc-1] == NULL) || (argv[argc-1][0] == '-') ) {  // there is NO input...
         cerr << "No argument provided!" << endl;
-        return 1;
     }
     else {  // there is an input...
         lastInput = argv[argc-1];
