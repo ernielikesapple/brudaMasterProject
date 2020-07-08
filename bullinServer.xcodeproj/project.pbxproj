@@ -8,8 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		561EC934248FF33F00DB01AB /* tcp-utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 561EC933248FF33F00DB01AB /* tcp-utils.cc */; };
-		561EC93A24A9718400DB01AB /* daemonExample.c in Sources */ = {isa = PBXBuildFile; fileRef = 561EC93924A9718400DB01AB /* daemonExample.c */; };
-		561EC93E24AFFC0A00DB01AB /* DaemonExampleWithConfigFile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 561EC93C24AFFC0A00DB01AB /* DaemonExampleWithConfigFile.cpp */; };
 		561EC95D24B4EEB600DB01AB /* configFilerParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 561EC95B24B4EEB600DB01AB /* configFilerParser.cpp */; };
 		561EC9A924B5733E00DB01AB /* ConfigFileHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 561EC9A824B5733E00DB01AB /* ConfigFileHandler.cpp */; };
 		561EC9B624B60E5300DB01AB /* TcpUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 561EC9B424B60E5300DB01AB /* TcpUtils.cpp */; };
@@ -31,13 +29,6 @@
 /* Begin PBXFileReference section */
 		561EC932248FF33F00DB01AB /* tcp-utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "tcp-utils.h"; sourceTree = "<group>"; };
 		561EC933248FF33F00DB01AB /* tcp-utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "tcp-utils.cc"; sourceTree = "<group>"; };
-		561EC935249A7DB700DB01AB /* icservs */ = {isa = PBXFileReference; lastKnownFileType = folder; path = icservs; sourceTree = "<group>"; };
-		561EC936249A7DCB00DB01AB /* triv_client */ = {isa = PBXFileReference; lastKnownFileType = folder; path = triv_client; sourceTree = "<group>"; };
-		561EC937249E6CB300DB01AB /* tservs */ = {isa = PBXFileReference; lastKnownFileType = folder; path = tservs; sourceTree = "<group>"; };
-		561EC93824A9718400DB01AB /* daemonExample.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = daemonExample.h; sourceTree = "<group>"; };
-		561EC93924A9718400DB01AB /* daemonExample.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = daemonExample.c; sourceTree = "<group>"; };
-		561EC93C24AFFC0A00DB01AB /* DaemonExampleWithConfigFile.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = DaemonExampleWithConfigFile.cpp; sourceTree = "<group>"; };
-		561EC93D24AFFC0A00DB01AB /* DaemonExampleWithConfigFile.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = DaemonExampleWithConfigFile.hpp; sourceTree = "<group>"; };
 		561EC95824B0006300DB01AB /* bbserv.conf  */ = {isa = PBXFileReference; lastKnownFileType = text; path = "bbserv.conf "; sourceTree = "<group>"; };
 		561EC95924B1390100DB01AB /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		561EC95A24B1695800DB01AB /* bbfile */ = {isa = PBXFileReference; lastKnownFileType = text; path = bbfile; sourceTree = "<group>"; };
@@ -82,9 +73,6 @@
 		56E88D36248B30C100E4F167 /* bullinServer */ = {
 			isa = PBXGroup;
 			children = (
-				561EC937249E6CB300DB01AB /* tservs */,
-				561EC936249A7DCB00DB01AB /* triv_client */,
-				561EC935249A7DB700DB01AB /* icservs */,
 				561EC933248FF33F00DB01AB /* tcp-utils.cc */,
 				561EC932248FF33F00DB01AB /* tcp-utils.h */,
 				561EC95A24B1695800DB01AB /* bbfile */,
@@ -98,10 +86,6 @@
 				561EC95B24B4EEB600DB01AB /* configFilerParser.cpp */,
 				561EC95C24B4EEB600DB01AB /* configFilerParser.hpp */,
 				561EC95824B0006300DB01AB /* bbserv.conf  */,
-				561EC93C24AFFC0A00DB01AB /* DaemonExampleWithConfigFile.cpp */,
-				561EC93D24AFFC0A00DB01AB /* DaemonExampleWithConfigFile.hpp */,
-				561EC93824A9718400DB01AB /* daemonExample.h */,
-				561EC93924A9718400DB01AB /* daemonExample.c */,
 			);
 			path = bullinServer;
 			sourceTree = "<group>";
@@ -164,11 +148,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				561EC9A924B5733E00DB01AB /* ConfigFileHandler.cpp in Sources */,
-				561EC93E24AFFC0A00DB01AB /* DaemonExampleWithConfigFile.cpp in Sources */,
 				561EC95D24B4EEB600DB01AB /* configFilerParser.cpp in Sources */,
 				561EC9B624B60E5300DB01AB /* TcpUtils.cpp in Sources */,
 				561EC934248FF33F00DB01AB /* tcp-utils.cc in Sources */,
-				561EC93A24A9718400DB01AB /* daemonExample.c in Sources */,
 				56E88D38248B30C100E4F167 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -100,6 +100,8 @@ int main(int argc, char** argv) {
     
     ConfigFileHandler* configFileHandler = ConfigFileHandler::newAInstance();
     configFileHandler -> configFileOpener("bbserv.conf");
-    
+    int sd;
+    sd = tcpUtils -> connectbyportint("www.google.com", 80);
+    cout << "sock descriptor is" << sd << endl;
     return 0;
 }

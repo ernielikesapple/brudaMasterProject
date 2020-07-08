@@ -27,6 +27,7 @@ ConfigFileHandler* ConfigFileHandler::newAInstance() {
 
 void ConfigFileHandler::configFileOpener(string filename) {
     
+    /*
     // append data to a file
     ofstream fileInstance; // notice we can write ofstream or fstream, ofstream for explicitly say we are output info into file, and notice
     fileInstance.open("bbserv.conf",std::ios_base::app); // notice we need to add the postfix at the end of the bbserv file not create it directly in IDE, and std::ios_base::app, for append the text in the end
@@ -47,4 +48,15 @@ void ConfigFileHandler::configFileOpener(string filename) {
     } else {
       cout << "open file fail" << '\n';
     }
+    */
+    
+    fstream configFile;
+    configFile.open(filename.c_str());
+    
+    
+    
+    
+    
+    
+    
 }
