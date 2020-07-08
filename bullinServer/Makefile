@@ -1,19 +1,20 @@
 CXX = g++
-CXXFLAGS = -g #-Wall -Werror   #usage??
+CXXFLAGS = -c #-Wall #-Werror   #usage??
 
 all: bbserv
 
-## Common:
-tcp-utils.o: tcp-utils.h tcp-utils.cc
-	$(CXX) $(CXXFLAGS) -c -o tcp-utils.o tcp-utils.cc
+bbserv: main.o TcpUtils.o ConfigFileHandler.o
+	$(CXX) main.o TcpUtils.o ConfigFileHandler.o -o bbserv
 
-## Server:
-main.o: main.cpp tcp-utils.h #add all the dependency
-	$(CXX) $(CXXFLAGS) -c -o main.o main.cpp
+main.o: main.cpp #add all the dependency
+	$(CXX) $(CXXFLAGS) main.cpp
 
-bbserv: main.o tcp-utils.o
-	$(CXX) $(CXXFLAGS) -o bbserv main.o tcp-utils.o
+TcpUtils.o: TcpUtils.cpp
+	$(CXX) $(CXXFLAGS) TcpUtils.cpp
+
+ConfigFileHandler.o: ConfigFileHandler.cpp
+	$(CXX) $(CXXFLAGS) ConfigFileHandler.cpp
 
 clean:
-	rm -f iserv ciserv cserv *~ *.o *.bak core \#*
+	rm -rf *o bbserv \
 

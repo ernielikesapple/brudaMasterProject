@@ -9,7 +9,8 @@
 #include <algorithm>
 
 
-#include "tcp-utils.h"
+#include "TcpUtils.hpp"
+#include "ConfigFileHandler.hpp"
 
 using namespace std;
 
@@ -22,6 +23,8 @@ bool d = true;
 bool D = false;
 
 int main(int argc, char** argv) {
+    
+    TcpUtils* tcpUtils = TcpUtils::newAInstance();
     
     // handle command line arguments:
     int option;
@@ -78,7 +81,7 @@ int main(int argc, char** argv) {
                         cerr << "Unknown option: '" << char(optopt) << "'!" << endl;
                     break;
                 case 'h':  // help menu
-                    printhelpFunction();
+                    tcpUtils -> printhelpFunction();
                     return EXIT_SUCCESS;
                 default:
                     cout << "ToDo: handle non-switch argument " << endl;
@@ -92,9 +95,11 @@ int main(int argc, char** argv) {
     }
     
     
+    
     // change the value in the config file if the value for d is true then we need to start the server
     
-    
+    ConfigFileHandler* configFileHandler = ConfigFileHandler::newAInstance();
+    configFileHandler -> configFileOpener("bbserv.conf");
     
     return 0;
 }
