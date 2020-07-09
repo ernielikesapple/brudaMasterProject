@@ -9,19 +9,31 @@
 #include <algorithm>
 
 
-#include "tcp-utils.h"
+#include "TcpUtils.hpp"
+#include "ConfigFileHandler.hpp"
 
 using namespace std;
 
-static int Tmax = 20;
-static int bp = 9000;
-static int sp = 10000;
-static FILE *bbfile;                // mandatory data if it's empty then refuse to start the server
-static vector<string> peers;
-bool d = true;
-bool D = false;
+static string configFileName = "bbserv.conf";
+static int Tmax = 20;   // keyValue in the config file: THMAX   // use stoi(), change int to string
+static int bp = 9000;   // keyValue in the config file: BBPORT , client server port number
+static int sp = 10000;  // keyValue in the config file: SYNCPORT, server port number
+static string bbfile = "bbfile";   // keyValue in the config file: BBFILE               // config fileName mandatory data if it's empty then refuse to start the server,
+static vector<string> peers;    // keyValue in the config file: PEERS
+bool d = true;  // keyValue in the config file: DAEMON
+bool D = false; // keyValue in the config file: DEBUG
+
 
 int main(int argc, char** argv) {
+    
+    // all the singleTon
+    TcpUtils* tcpUtils = TcpUtils::newAInstance();
+    ConfigFileHandler* configFileHandler = ConfigFileHandler::newAInstance();
+    // TODO: Build a config file reader to read the file content , load the value into each variables
+    
+    // TODO: CHECK IF THE Config file exists, and if not exit the program and throw error
+    
+    
     
     // handle command line arguments:
     int option;
@@ -34,67 +46,61 @@ int main(int argc, char** argv) {
     else {  // there is an input...
         lastInput = argv[argc-1];
     }
-
-    cout << "lastInput = " << lastInput << endl;
-
-    // Shut GetOpt error messages down (return '?'):
-    opterr = 0;
-
+    
     // Retrieve the options:
     while (optind < argc) {
         if ( (option = getopt(argc, argv, "b:c:T:t:p:s:fdh")) != -1 ) {  // for each option...
             switch ( option ) {
                 case 'b':  // change bbfile name
-                    cout << "ToDo: change bbfile new name" << optarg << endl;
+                    configFileHandler -> configFileModifier(configFileName,"BBFILE",optarg);
+                    // TODO: rename the bbfile fileName bbfile to sth else, search file renaming
+                    //TODO: renaming.... note don't do this // bbfile = optarg; // now it will affect other command line
                     break;
                 case 'c':  // change config file name
-                    cout << "ToDo: change bbserv.conf  new name" << optarg << endl;
+                    // TODO: rename config fileName bbfile to sth else, search file renaming
                     break;
                 case 'T':  // overide Tmax number, preallocated threads
-                    Tmax = stoi(optarg);
-                    cout << "do things with T para, new Tmax now is: " << Tmax << endl;
+                    configFileHandler -> configFileModifier(configFileName,"THMAX",optarg);
                     break;
                 case 't':  // overide Tmax number, preallocated threads
-                    Tmax = stoi(optarg);
-                    cout << "do things with T para, new Tmax now is: " << Tmax << endl;
+                    configFileHandler -> configFileModifier(configFileName,"THMAX",optarg);
                     break;
                 case 'p':  // client server port number
-                    bp = stoi(optarg);
-                    cout << "do things with bp para, new bp now is: " << bp << endl;
+                    configFileHandler -> configFileModifier(configFileName,"BBPORT",optarg);
                     break;
                 case 's': // server port number
-                    sp = stoi(optarg);
-                    cout << "do things with sp para, new bp now is: " << sp << endl;
+                    configFileHandler -> configFileModifier(configFileName,"SYNCPORT",optarg);
                     break;
                 case 'f':   // start daemon...
-                    d = false;
-                    cout << "ToDo: change value of d in conf file" << endl;
+                    configFileHandler -> configFileModifier(configFileName,"DAEMON","false");
                     break;
                 case 'd':   // debug mode...
-                    D = true;
-                    cout << "ToDo: debug mode" << endl;
+                    configFileHandler -> configFileModifier(configFileName,"DEBUG","true");
                     break;
                 case '?':  // unknown option...
                         cerr << "Unknown option: '" << char(optopt) << "'!" << endl;
                     break;
                 case 'h':  // help menu
-                    printhelpFunction();
-                    return EXIT_SUCCESS;
+                    tcpUtils -> printhelpFunction();
                 default:
-                    cout << "ToDo: handle non-switch argument " << endl;
-                    cout << "ToDo: handle error" << endl;
                     break;
             }
-        } else { // handle host:post  peers          and other start options
+        } else {
+            // TODO: use a string to append/take all the values from argv[optind] , and then after the while loop take everything into the config file
             cout << "handle non-switch argument are: " << argv[optind] << endl;
             optind++;
         }
     }
     
-    
-    // change the value in the config file if the value for d is true then we need to start the server
-    
+    // TODO: handle host:post  peers          and other start options
     
     
+    // TODO: change the value in the config file if the value for d is true then we need to start the server
+    
+    // TODO: DAEMONZING
+    
+    int sd;
+    sd = tcpUtils -> connectbyportint("www.google.com", 80);
+    cout << "sock descriptor is" << sd << endl;
     return 0;
 }
