@@ -20,7 +20,9 @@ class ConfigFileHandler {
     public:
         static ConfigFileHandler* newAInstance();
         
-        void configFileOpener(std::string filename);
+        void configFileModifier(std::string filename, std::string keyValueToBeSearched, std::string valueToBeFilled);
+    
+        void configFileReader(std::string filename);
         
 };
 

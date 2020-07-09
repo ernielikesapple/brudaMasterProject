@@ -73,19 +73,19 @@
 		56E88D36248B30C100E4F167 /* bullinServer */ = {
 			isa = PBXGroup;
 			children = (
-				561EC933248FF33F00DB01AB /* tcp-utils.cc */,
-				561EC932248FF33F00DB01AB /* tcp-utils.h */,
 				561EC95A24B1695800DB01AB /* bbfile */,
 				56E88D37248B30C100E4F167 /* main.cpp */,
 				561EC9B424B60E5300DB01AB /* TcpUtils.cpp */,
 				561EC9B524B60E5300DB01AB /* TcpUtils.hpp */,
 				561EC9A824B5733E00DB01AB /* ConfigFileHandler.cpp */,
 				561EC9A724B5733E00DB01AB /* ConfigFileHandler.hpp */,
+				561EC95824B0006300DB01AB /* bbserv.conf  */,
 				561EC95924B1390100DB01AB /* Makefile */,
 				561EC9AA24B57C4D00DB01AB /* textHolders */,
+				561EC933248FF33F00DB01AB /* tcp-utils.cc */,
+				561EC932248FF33F00DB01AB /* tcp-utils.h */,
 				561EC95B24B4EEB600DB01AB /* configFilerParser.cpp */,
 				561EC95C24B4EEB600DB01AB /* configFilerParser.hpp */,
-				561EC95824B0006300DB01AB /* bbserv.conf  */,
 			);
 			path = bullinServer;
 			sourceTree = "<group>";

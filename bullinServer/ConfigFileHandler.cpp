@@ -25,38 +25,81 @@ ConfigFileHandler* ConfigFileHandler::newAInstance() {
     return singleton;
 }
 
-void ConfigFileHandler::configFileOpener(string filename) {
-    
-    /*
-    // append data to a file
-    ofstream fileInstance; // notice we can write ofstream or fstream, ofstream for explicitly say we are output info into file, and notice
-    fileInstance.open("bbserv.conf",std::ios_base::app); // notice we need to add the postfix at the end of the bbserv file not create it directly in IDE, and std::ios_base::app, for append the text in the end
-    fileInstance << "as1dasd";
-    fileInstance.close();
-    
-    
-    // read data into a file
-    string line;
-    ifstream myfile ("bbserv.conf");
-    if (myfile.is_open()) {
-      cout << "open file success" << '\n';
-      while ( getline (myfile,line) )
-      {
-        cout << line << '\n';
-      }
-      myfile.close();
-    } else {
-      cout << "open file fail" << '\n';
-    }
-    */
-    
+void ConfigFileHandler::configFileModifier(string filename, string keyToBeSearched, string valueToBeFilled) {
     fstream configFile;
-    configFile.open(filename.c_str());
+    configFile.open(filename.c_str(),ios::in);
+    if (configFile.fail()) {
+        cout << "Unable to find defaultConfig file" << endl;
+        exit(0);
+    }
+    string configFileContainer = "";
+    string delimeter = "=";
+    
+    string line;
+    while ( getline (configFile,line) )
+    {
+        size_t foundComments = line.find_first_of('#');  // if not find the # it will return a very large number so that the next line can the whole text,
+        string configStringInEachLine = line.substr(0, foundComments);
+        
+        // TODO: notice to have, add trim and reduce
+        string key, value;
+        unsigned long foundDelimeter = configStringInEachLine.find(delimeter);
+        if (foundDelimeter != string::npos) {
+            key  = configStringInEachLine.substr(0, foundDelimeter);
+            value = configStringInEachLine.substr(foundDelimeter+1);
+            
+            if (key == keyToBeSearched) {
+                if (value.length() > valueToBeFilled.length()) {
+                    line.replace(foundDelimeter+1, value.length(), valueToBeFilled);
+                } else {
+                    line.replace(foundDelimeter+1, valueToBeFilled.length(), valueToBeFilled);
+                }
+            }
+            configFileContainer = configFileContainer + line + "\n";
+        }
+    }
+    configFile.close();
     
     
+    configFile.open(filename.c_str(),ios::out);  // replace all the text in the text file again
+    if (configFile.fail()) {
+        cout << "Unable to find defaultConfig file" << endl;
+        exit(0);
+    }
     
+    configFile << configFileContainer;
+    configFile.close();
     
+}
+
+void ConfigFileHandler::configFileReader(std::string filename) { // TODO: Refactoring the code,
+    fstream configFile;
+    configFile.open(filename.c_str(),ios::in);
+    if (configFile.fail()) {
+        cout << "Unable to find defaultConfig file" << endl;
+        exit(0);
+    }
+    string configFileContainer = ""; // TODO: Refactoring the code, change it to a map to store value
+    string delimeter = "=";
     
+    string line;
+    while ( getline (configFile,line) )
+    {
+        size_t foundComments = line.find_first_of('#');  // if not find the # it will return a very large number so that the next line can the whole text,
+        string configStringInEachLine = line.substr(0, foundComments);
+        
+        // TODO: notice to have, add trim and reduce
+        
+        string key, value;
+        unsigned long foundDelimeter = configStringInEachLine.find(delimeter);
+        if (foundDelimeter != string::npos) {
+            key  = configStringInEachLine.substr(0, foundDelimeter);
+            value = configStringInEachLine.substr(foundDelimeter+1);
+            // TODO: store key value pair into map
+        }
+    }
+    configFile.close();
     
-    
+    // TODO: Notice when handling the boolean the value can be 0 / 1 / true / false, read the pdf again
+        
 }
