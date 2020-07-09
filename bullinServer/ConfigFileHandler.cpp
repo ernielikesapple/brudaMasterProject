@@ -9,7 +9,7 @@
 #include "ConfigFileHandler.hpp"
 #include "fstream"
 #include <iostream>
-
+#include <algorithm>
 
 using namespace std;
 
@@ -38,6 +38,8 @@ void ConfigFileHandler::configFileModifier(string filename, string keyToBeSearch
     string line;
     while ( getline (configFile,line) )
     {
+        line.erase(std::remove_if(line.begin(), line.end(), ::isspace),line.end()); // remove the white space
+        if(line[0] == '#' || line.empty()) continue; // skip comment
         size_t foundComments = line.find_first_of('#');  // if not find the # it will return a very large number so that the next line can the whole text,
         string configStringInEachLine = line.substr(0, foundComments);
         
@@ -59,7 +61,6 @@ void ConfigFileHandler::configFileModifier(string filename, string keyToBeSearch
         }
     }
     configFile.close();
-    
     
     configFile.open(filename.c_str(),ios::out);  // replace all the text in the text file again
     if (configFile.fail()) {
@@ -85,6 +86,9 @@ void ConfigFileHandler::configFileReader(std::string filename) { // TODO: Refact
     string line;
     while ( getline (configFile,line) )
     {
+        line.erase(std::remove_if(line.begin(), line.end(), ::isspace),line.end()); // remove the white space
+        if(line[0] == '#' || line.empty()) continue; // skip comment
+        
         size_t foundComments = line.find_first_of('#');  // if not find the # it will return a very large number so that the next line can the whole text,
         string configStringInEachLine = line.substr(0, foundComments);
         

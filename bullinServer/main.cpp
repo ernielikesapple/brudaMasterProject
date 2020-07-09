@@ -48,6 +48,7 @@ int main(int argc, char** argv) {
     }
     
     // Retrieve the options:
+    string peersString = "";
     while (optind < argc) {
         if ( (option = getopt(argc, argv, "b:c:T:t:p:s:fdh")) != -1 ) {  // for each option...
             switch ( option ) {
@@ -88,11 +89,17 @@ int main(int argc, char** argv) {
         } else {
             // TODO: use a string to append/take all the values from argv[optind] , and then after the while loop take everything into the config file
             cout << "handle non-switch argument are: " << argv[optind] << endl;
+            if (strcmp(argv[optind], "") != 0) {
+                peersString = peersString + argv[optind] + " ";
+            }
             optind++;
         }
     }
     
     // TODO: handle host:post  peers          and other start options
+    if (peersString.length() != 0) {
+        configFileHandler -> configFileModifier(configFileName,"PEERS",peersString);
+    }
     
     
     // TODO: change the value in the config file if the value for d is true then we need to start the server
