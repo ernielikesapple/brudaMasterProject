@@ -11,18 +11,20 @@
 
 #include <stdio.h>
 #include <iostream>
+#include <map>
 
 class ConfigFileHandler {
     
     private:
         static ConfigFileHandler* singleton;
-    
+        std::map<std::string, std::string> configDataMap;
     public:
         static ConfigFileHandler* newAInstance();
         
         void configFileModifier(std::string filename, std::string keyValueToBeSearched, std::string valueToBeFilled);
     
         void configFileReader(std::string filename);
+        void configFileValueGetter(std::string key, std::string& value);  // passing a reference so that value will be changed directly
         
 };
 

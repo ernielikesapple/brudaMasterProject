@@ -29,7 +29,7 @@ void ConfigFileHandler::configFileModifier(string filename, string keyToBeSearch
     fstream configFile;
     configFile.open(filename.c_str(),ios::in);
     if (configFile.fail()) {
-        cout << "Unable to find defaultConfig file" << endl;
+        cout << "Unable to find defaultConfig file 1" << endl;
         exit(0);
     }
     string configFileContainer = "";
@@ -43,7 +43,7 @@ void ConfigFileHandler::configFileModifier(string filename, string keyToBeSearch
         size_t foundComments = line.find_first_of('#');  // if not find the # it will return a very large number so that the next line can the whole text,
         string configStringInEachLine = line.substr(0, foundComments);
         
-        // TODO: notice to have, add trim and reduce
+        // TODO: notic to have, add trim and reduce
         string key, value;
         unsigned long foundDelimeter = configStringInEachLine.find(delimeter);
         if (foundDelimeter != string::npos) {
@@ -64,7 +64,7 @@ void ConfigFileHandler::configFileModifier(string filename, string keyToBeSearch
     
     configFile.open(filename.c_str(),ios::out);  // replace all the text in the text file again
     if (configFile.fail()) {
-        cout << "Unable to find defaultConfig file" << endl;
+        cout << "Unable to find defaultConfig file 2" << endl;
         exit(0);
     }
     
@@ -73,14 +73,13 @@ void ConfigFileHandler::configFileModifier(string filename, string keyToBeSearch
     
 }
 
-void ConfigFileHandler::configFileReader(std::string filename) { // TODO: Refactoring the code,
+void ConfigFileHandler::configFileReader(std::string filename) {
     fstream configFile;
     configFile.open(filename.c_str(),ios::in);
     if (configFile.fail()) {
-        cout << "Unable to find defaultConfig file" << endl;
+        cout << "Unable to find defaultConfig file 3" << endl;
         exit(0);
     }
-    string configFileContainer = ""; // TODO: Refactoring the code, change it to a map to store value
     string delimeter = "=";
     
     string line;
@@ -93,17 +92,23 @@ void ConfigFileHandler::configFileReader(std::string filename) { // TODO: Refact
         string configStringInEachLine = line.substr(0, foundComments);
         
         // TODO: notice to have, add trim and reduce
-        
         string key, value;
         unsigned long foundDelimeter = configStringInEachLine.find(delimeter);
         if (foundDelimeter != string::npos) {
             key  = configStringInEachLine.substr(0, foundDelimeter);
             value = configStringInEachLine.substr(foundDelimeter+1);
-            // TODO: store key value pair into map
+            configDataMap.insert(std::pair<string, string>(key, value)); // store key value pair into map
         }
     }
     configFile.close();
-    
-    // TODO: Notice when handling the boolean the value can be 0 / 1 / true / false, read the pdf again
-        
+}
+
+void ConfigFileHandler::configFileValueGetter(std::string key, std::string& value) {
+    map<string, string>::iterator it;
+    it = configDataMap.find(key);
+    if (it != configDataMap.end()) {
+        value = (it -> second).c_str();
+    } else {
+        cout << "Unable to find the key in the Config file" << endl;
+    }
 }
