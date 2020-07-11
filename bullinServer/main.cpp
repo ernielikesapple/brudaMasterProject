@@ -11,12 +11,14 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <syslog.h>
 
 #include "TcpUtils.hpp"
 #include "ConfigFileHandler.hpp"
 
 using namespace std;
 
+char const* app_name = "bbserv";
 string configFileName = "bbserv.conf";
 string Tmax = "20";   // keyValue in the config file: THMAX   // use stoi(), change int to string
 string bp = "9000";   // keyValue in the config file: BBPORT , port number for client server communication 
@@ -26,10 +28,10 @@ string peers = "";    // keyValue in the config file: PEERS // TODO: to verify t
 bool d = true;   // keyValue in the config file: DAEMON
 bool D = false; // keyValue in the config file: DEBUG
 
-char const *PIDFile = "bbserv.pid"; // the lock file, to lock the critical region so that only one daemon is runnning at a time
+char const* PIDFile = "bbserv.pid"; // the lock file, to lock the critical region so that only one daemon is runnning at a time
 static int PIDFileDescriptor = -1;
 
-char const *bbservLogFile = "bbserv.log"; // redirct all the output to this file when under daemon mode
+char const* bbservLogFile = "bbserv.log"; // redirct all the output to this file when under daemon mode
 
 static int running = 0;
 
@@ -121,6 +123,10 @@ int main(int argc, char** argv) {
         daemonize();
     }
     
+    /* Open system log and write message to it */
+    openlog(argv[0], LOG_PID|LOG_CONS, LOG_DAEMON);
+    syslog(LOG_INFO, "Started %s", app_name);
+    
     // TODO: START THE SERVER
     running = 1;
     // while (running == 1) { }
@@ -131,6 +137,10 @@ int main(int argc, char** argv) {
     
     
     // TODO: HANDLE: END THE SERVER
+    
+    /* Write system log and close it. */
+    syslog(LOG_INFO, "Stopped %s", app_name);
+    closelog();
     // Free allocated memory
     if (PIDFile !=  NULL) {  delete PIDFile; }
     
@@ -208,15 +218,41 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
 
 void daemonize() {
     
+    int bgpid = fork();
+    if (bgpid < 0) {
+        perror("startup fork");
+        exit(EXIT_FAILURE);
+    }
     
+    if (bgpid) { // Leaves the current process group.
+        exit(EXIT_SUCCESS);
+    }
     
+    /* Set new file permissions */
+    // umask(0);
     
+    /* Change the working directory to the root directory */
+    // chdir("/");
+
+    // Closes all file descriptors and re-opens them as appropriate. In particular console output is redirected to the file bbserv.log located in the current working directory.
+    for (int i = getdtablesize() - 1; i >= 0 ; i--) {
+        close(i);
+    }
     
+    // Detaches from the controlling tty.
+    // We closed descriptor 0 already, so this will be the first one available
+    int fd = open("/dev/null", O_RDWR);
+    // We now re-open descriptors 1 and 2, in this order:
+                           //O_RDWR
+    fd = open(bbservLogFile, O_RDWR|O_CREAT|O_APPEND, 0644);
+    dup(fd);
+    
+    // Puts itself into background.
     
     // Check and writes into the PID file bbserv.pid located in the current working directory.
     if (PIDFile != NULL) {
         char str[256];
-        PIDFileDescriptor = open(PIDFile, O_RDWR|O_CREAT, 0640);
+        PIDFileDescriptor = open(PIDFile, O_RDWR|O_CREAT, 0644);
         if (PIDFileDescriptor < 0) {
             /* Can't open lockfile */
             exit(EXIT_FAILURE);
