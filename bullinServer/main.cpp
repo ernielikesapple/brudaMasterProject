@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <syslog.h>
+#include <signal.h>
 
 #include "TcpUtils.hpp"
 #include "ConfigFileHandler.hpp"
