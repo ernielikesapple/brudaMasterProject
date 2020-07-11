@@ -121,8 +121,14 @@ int main(int argc, char** argv) {
     loadConfigFile();  // reload everything after config
     // TODO: change the value in the config file if the value for d is true then we need to start the server
     if (d) { // daemonizing
+        cout << "zou zhe 1"<< endl;
         daemonize();
+        
+    } else {
+        cout << "zou zhe 2"<< endl;
     }
+    
+    cout << "helloooo11111" << endl;
     
     /* Open system log and write message to it */
     openlog(argv[0], LOG_PID|LOG_CONS, LOG_DAEMON);
@@ -133,7 +139,7 @@ int main(int argc, char** argv) {
     // while (running == 1) { }
     
     
-    
+    cout << "helloooo22222222" << endl;
     
     
     
@@ -191,7 +197,7 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
         // TODO: closes all the connections to all the clients
         // TODO: terminates the server
         
-        
+        cout << "goes on the log" << endl;
         /* Unlock and close lockfile */
         if (PIDFileDescriptor != -1) {
             lockf(PIDFileDescriptor, F_ULOCK, 0);
