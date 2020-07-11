@@ -110,6 +110,7 @@ void handle_signal(int sig)
 {
     if (sig == SIGINT) {
         fprintf(log_stream, "Debug: stopping daemon ...\n");
+        
         /* Unlock and close lockfile */
         if (pid_fd != -1) {
             lockf(pid_fd, F_ULOCK, 0);
@@ -119,6 +120,7 @@ void handle_signal(int sig)
         if (pid_file_name != NULL) {
             unlink(pid_file_name);
         }
+        
         running = 0;
         /* Reset signal handling to default behavior */
         signal(SIGINT, SIG_DFL);
@@ -159,6 +161,9 @@ static void daemonize()
     /* Ignore signal sent from child to parent process */
     signal(SIGCHLD, SIG_IGN);
 
+    
+    
+    
     /* Fork off for the second time*/
     pid = fork();
 
@@ -172,6 +177,9 @@ static void daemonize()
         exit(EXIT_SUCCESS);
     }
 
+    
+    
+    
     /* Set new file permissions */
     umask(0);
 
@@ -189,6 +197,9 @@ static void daemonize()
     stdout = fopen("/dev/null", "w+");
     stderr = fopen("/dev/null", "w+");
 
+    
+    
+    
     /* Try to write PID of daemon to lockfile */
     if (pid_file_name != NULL)
     {

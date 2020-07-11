@@ -31,13 +31,15 @@ static int PIDFileDescriptor = -1;
 
 char const *bbservLogFile = "bbserv.log"; // redirct all the output to this file when under daemon mode
 
+static int running = 0;
+
 // all the singleTon
 TcpUtils* tcpUtils = TcpUtils::newAInstance();
 ConfigFileHandler* configFileHandler = ConfigFileHandler::newAInstance();
 
 void loadConfigFile();
 void daemonize();
-void signalHandlers(int signal);
+void signalHandlers(int sig);
 
 int main(int argc, char** argv) {
     
@@ -120,8 +122,8 @@ int main(int argc, char** argv) {
     }
     
     // TODO: START THE SERVER
-    
-    
+    running = 1;
+    // while (running == 1) { }
     
     
     
@@ -130,7 +132,7 @@ int main(int argc, char** argv) {
     
     // TODO: HANDLE: END THE SERVER
     // Free allocated memory
-    if (PIDFile !=  NULL) { // free(PIDFile); }
+    if (PIDFile !=  NULL) {  delete PIDFile; }
     
     return 0;
 }
@@ -171,25 +173,35 @@ void loadConfigFile() {
     }
 }
 
-void signalHandlers(int signal) { //TODO: Handle all the signals
-    if (signal == SIGQUIT) {
+void signalHandlers(int sig) { //TODO: Handle all the signals
+    if (sig == SIGQUIT) { // Quit the daemon
         // TODO: Closes all the master sockets
         // TODO: terminates all the preallocated threads
         // TODO: closes all the connections to all the clients
-        
         // TODO: terminates the server
         
-        // Unlock and close the lockfile
         
+        /* Unlock and close lockfile */
+        if (PIDFileDescriptor != -1) {
+            lockf(PIDFileDescriptor, F_ULOCK, 0);
+            close(PIDFileDescriptor);
+        }
+        /* Try to delete lockfile */
+        if (PIDFile != NULL) {
+            remove(PIDFile);
+        }
         
-    } else if (signal == SIGHUP) {
+        running = 0;
+        /* Reset signal handling to default behavior */
+        signal(SIGINT, SIG_DFL);
+    } else if (sig == SIGHUP) {
         // TODO: Closes all the master sockets
         // TODO: terminates all the preallocated threads
         // TODO: closes all the connections to all the clients
         
         
         loadConfigFile(); // reload the config file
-    } else if (signal == SIGCHLD) {
+    } else if (sig == SIGCHLD) {
         // TODO: handle SIGCHLD
     }
 }
@@ -198,8 +210,24 @@ void daemonize() {
     
     
     
+    
+    
+    
     // Check and writes into the PID file bbserv.pid located in the current working directory.
     if (PIDFile != NULL) {
-        
+        char str[256];
+        PIDFileDescriptor = open(PIDFile, O_RDWR|O_CREAT, 0640);
+        if (PIDFileDescriptor < 0) {
+            /* Can't open lockfile */
+            exit(EXIT_FAILURE);
+        }
+        if (lockf(PIDFileDescriptor, F_TLOCK, 0) < 0) {
+            /* Can't lock file */
+            exit(EXIT_FAILURE);
+        }
+        /* Get current PID */
+        sprintf(str, "%d\n", getpid());
+        /* Write PID to lockfile */
+        write(PIDFileDescriptor, str, strlen(str));
     }
 }
