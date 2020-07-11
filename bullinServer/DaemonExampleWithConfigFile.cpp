@@ -135,7 +135,7 @@ void handle_signal(int sig)
 /**
  * \brief This function will daemonize this app
  */
-static void daemonize()
+static void daemonize1()
 {
     pid_t pid = 0;
     int fd;
@@ -286,7 +286,7 @@ int main12(int argc, char *argv[])
     if (start_daemonized == 1) {
         /* It is also possible to use glibc function deamon()
          * at this point, but it is useful to customize your daemon. */
-        daemonize();
+        daemonize1();
     }
 
     /* Open system log and write message to it */

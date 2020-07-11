@@ -118,6 +118,7 @@ int main(int argc, char** argv) {
         configFileHandler -> configFileModifier(configFileName,"PEERS",peersString);
     }
     
+    loadConfigFile();  // reload everything after config
     // TODO: change the value in the config file if the value for d is true then we need to start the server
     if (d) { // daemonizing
         daemonize();
