@@ -56,7 +56,8 @@ int main(int argc, char** argv) {
 
     // Retrieve the (non-option) argument:
     if ( (argc <= 1) || (argv[argc-1] == NULL) || (argv[argc-1][0] == '-') ) {  // there is NO input...
-        cerr << "No argument provided!" << endl;
+        // cerr << "No argument provided!" << endl;
+        // handle the situation when there is no arguments provided
     }
     else {  // there is an input...
         lastInput = argv[argc-1];
@@ -216,6 +217,8 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
         // TODO: terminates all the preallocated threads
         // TODO: closes all the connections to all the clients
         loadConfigFile(); // reload the config file
+        // TODO: RESTART THE SERVER PART
+        
     } else if (sig == SIGCHLD) {
         // TODO: handle SIGCHLD
     }
