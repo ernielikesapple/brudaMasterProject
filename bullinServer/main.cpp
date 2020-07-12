@@ -236,16 +236,16 @@ void daemonize() {
         exit(EXIT_SUCCESS);
     }
     
-    
     signal(SIGCHLD, SIG_IGN);
 
-    
+
     /* Set new file permissions */
     // umask(0);
     
     /* Change the working directory to the root directory */
     // chdir("/");
-
+    // chdir("/run/bbserv"); TODO: CHECK why this is not creating folder under /run/bbserv
+    
     // Closes all file descriptors and re-opens them as appropriate. In particular console output is redirected to the file bbserv.log located in the current working directory.
     for (int i = getdtablesize() - 1; i >= 0 ; i--) {
         close(i);
