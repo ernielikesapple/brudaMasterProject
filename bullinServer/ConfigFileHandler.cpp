@@ -51,12 +51,23 @@ void ConfigFileHandler::configFileModifier(string filename, string keyToBeSearch
             value = configStringInEachLine.substr(foundDelimeter+1);
             
             if (key == keyToBeSearched) {
+                // updat the value in the map!
+                map<string, string>::iterator it;
+                it = configDataMap.find(key);
+                if (it != configDataMap.end()) {
+                    it -> second = valueToBeFilled;
+                } else {
+                    cout << "Unable to find the key in the map varible, when updating the value" << endl;
+                }
+                    
+                // update the value in the file 1
                 if (value.length() > valueToBeFilled.length()) {
                     line.replace(foundDelimeter+1, value.length(), valueToBeFilled);
                 } else {
                     line.replace(foundDelimeter+1, valueToBeFilled.length(), valueToBeFilled);
                 }
             }
+            // update the value in the file 2
             configFileContainer = configFileContainer + line + "\n";
         }
     }

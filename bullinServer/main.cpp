@@ -50,9 +50,6 @@ int main(int argc, char** argv) {
     
     umask(0022); // Sets an appropriate umask.
     
-    signal(SIGQUIT,signalHandlers); // Installs appropriate signal handlers for all the signals.
-    signal(SIGHUP,signalHandlers);
-    
     // handle command line arguments:
     int option;
     string lastInput = "";
@@ -73,6 +70,7 @@ int main(int argc, char** argv) {
                 case 'b':  // change bbfile name
                     std::rename(bbfile.c_str(), optarg);
                     configFileHandler -> configFileModifier(configFileName,"BBFILE",optarg); // insert the new name inside the config file
+                    bbfile = optarg;
                     break;
                 case 'c':  // change config file name
                     std::rename(configFileName.c_str(), optarg);
@@ -80,21 +78,27 @@ int main(int argc, char** argv) {
                     break;
                 case 'T':  // overide Tmax number, preallocated threads
                     configFileHandler -> configFileModifier(configFileName,"THMAX",optarg);
+                    Tmax = optarg;
                     break;
                 case 't':  // overide Tmax number, preallocated threads
                     configFileHandler -> configFileModifier(configFileName,"THMAX",optarg);
+                    Tmax = optarg;
                     break;
                 case 'p':  // client server port number
                     configFileHandler -> configFileModifier(configFileName,"BBPORT",optarg);
+                    bp = optarg;
                     break;
                 case 's': // server port number
                     configFileHandler -> configFileModifier(configFileName,"SYNCPORT",optarg);
+                    sp = optarg;
                     break;
                 case 'f':   // start daemon...
                     configFileHandler -> configFileModifier(configFileName,"DAEMON","false");
+                    d = false;
                     break;
                 case 'd':   // debug mode...
                     configFileHandler -> configFileModifier(configFileName,"DEBUG","true");
+                    D = true;
                     break;
                 case '?':  // unknown option...
                         cerr << "Unknown option: '" << char(optopt) << "'!" << endl;
@@ -122,27 +126,22 @@ int main(int argc, char** argv) {
     loadConfigFile();  // reload everything after config
     // TODO: change the value in the config file if the value for d is true then we need to start the server
     if (d) { // daemonizing
-        cout << "zou zhe 1"<< endl;
         daemonize();
-        
-    } else {
-        cout << "zou zhe 2"<< endl;
     }
-    
-    cout << "helloooo11111" << endl;
-    
+       
     /* Open system log and write message to it */
     openlog(argv[0], LOG_PID|LOG_CONS, LOG_DAEMON);
     syslog(LOG_INFO, "Started %s", app_name);
     
+    signal(SIGQUIT,signalHandlers); // Installs appropriate signal handlers for all the signals.
+    signal(SIGHUP,signalHandlers);
+    
     // TODO: START THE SERVER
     running = 1;
-    // while (running == 1) { }
-    
-    
-    cout << "helloooo22222222" << endl;
-    
-    
+    while (running == 1) {
+        // insert server code here
+        sleep(1);
+    }
     
     // TODO: HANDLE: END THE SERVER
     
@@ -172,7 +171,8 @@ void loadConfigFile() {
         
         string tempStringBoolean_d = "";
         configFileHandler ->configFileValueGetter("DAEMON", tempStringBoolean_d);
-        if (tempStringBoolean_d == "true" || tempStringBoolean_d == "1") {
+
+        if (tempStringBoolean_d == "true" || tempStringBoolean_d == "TRUE" || tempStringBoolean_d == "True" || tempStringBoolean_d == "1") {
             d = true;
         } else {
             d = false;
@@ -180,7 +180,7 @@ void loadConfigFile() {
         
         string tempStringBoolean_D = "";
         configFileHandler ->configFileValueGetter("DEBUG", tempStringBoolean_D);
-        if (tempStringBoolean_D == "true" || tempStringBoolean_D == "1") {
+        if (tempStringBoolean_D == "true" || tempStringBoolean_D == "TRUE" || tempStringBoolean_D == "True" || tempStringBoolean_D == "1") {
             D = true;
         } else {
             D = false;
@@ -198,7 +198,6 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
         // TODO: closes all the connections to all the clients
         // TODO: terminates the server
         
-        cout << "goes on the log" << endl;
         /* Unlock and close lockfile */
         if (PIDFileDescriptor != -1) {
             lockf(PIDFileDescriptor, F_ULOCK, 0);
@@ -216,8 +215,6 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
         // TODO: Closes all the master sockets
         // TODO: terminates all the preallocated threads
         // TODO: closes all the connections to all the clients
-        
-        
         loadConfigFile(); // reload the config file
     } else if (sig == SIGCHLD) {
         // TODO: handle SIGCHLD
@@ -235,6 +232,10 @@ void daemonize() {
     if (bgpid) { // Leaves the current process group.
         exit(EXIT_SUCCESS);
     }
+    
+    
+    signal(SIGCHLD, SIG_IGN);
+
     
     /* Set new file permissions */
     // umask(0);
