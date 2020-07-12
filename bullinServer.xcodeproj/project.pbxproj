@@ -10,7 +10,6 @@
 		561EC934248FF33F00DB01AB /* tcp-utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 561EC933248FF33F00DB01AB /* tcp-utils.cc */; };
 		561EC9A924B5733E00DB01AB /* ConfigFileHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 561EC9A824B5733E00DB01AB /* ConfigFileHandler.cpp */; };
 		561EC9B624B60E5300DB01AB /* TcpUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 561EC9B424B60E5300DB01AB /* TcpUtils.cpp */; };
-		561EC9B924B80EB300DB01AB /* DaemonExampleWithConfigFile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 561EC9B724B80EB300DB01AB /* DaemonExampleWithConfigFile.cpp */; };
 		56E88D38248B30C100E4F167 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 56E88D37248B30C100E4F167 /* main.cpp */; };
 /* End PBXBuildFile section */
 
@@ -37,8 +36,6 @@
 		561EC9AA24B57C4D00DB01AB /* textHolders */ = {isa = PBXFileReference; lastKnownFileType = text; path = textHolders; sourceTree = "<group>"; };
 		561EC9B424B60E5300DB01AB /* TcpUtils.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TcpUtils.cpp; sourceTree = "<group>"; };
 		561EC9B524B60E5300DB01AB /* TcpUtils.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = TcpUtils.hpp; sourceTree = "<group>"; };
-		561EC9B724B80EB300DB01AB /* DaemonExampleWithConfigFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DaemonExampleWithConfigFile.cpp; sourceTree = "<group>"; };
-		561EC9B824B80EB300DB01AB /* DaemonExampleWithConfigFile.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = DaemonExampleWithConfigFile.hpp; sourceTree = "<group>"; };
 		56E88D34248B30C100E4F167 /* bullinServer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = bullinServer; sourceTree = BUILT_PRODUCTS_DIR; };
 		56E88D37248B30C100E4F167 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -75,8 +72,6 @@
 			children = (
 				561EC95A24B1695800DB01AB /* bbfile */,
 				56E88D37248B30C100E4F167 /* main.cpp */,
-				561EC9B724B80EB300DB01AB /* DaemonExampleWithConfigFile.cpp */,
-				561EC9B824B80EB300DB01AB /* DaemonExampleWithConfigFile.hpp */,
 				561EC9B424B60E5300DB01AB /* TcpUtils.cpp */,
 				561EC9B524B60E5300DB01AB /* TcpUtils.hpp */,
 				561EC9A824B5733E00DB01AB /* ConfigFileHandler.cpp */,
@@ -150,7 +145,6 @@
 				561EC9A924B5733E00DB01AB /* ConfigFileHandler.cpp in Sources */,
 				561EC9B624B60E5300DB01AB /* TcpUtils.cpp in Sources */,
 				561EC934248FF33F00DB01AB /* tcp-utils.cc in Sources */,
-				561EC9B924B80EB300DB01AB /* DaemonExampleWithConfigFile.cpp in Sources */,
 				56E88D38248B30C100E4F167 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
