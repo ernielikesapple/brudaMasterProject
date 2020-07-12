@@ -150,7 +150,7 @@ int main(int argc, char** argv) {
     syslog(LOG_INFO, "Stopped %s", app_name);
     closelog();
     // Free allocated memory
-    if (PIDFile !=  NULL) {  delete PIDFile; }
+    //  if (PIDFile !=  NULL) {  delete PIDFile; }
     
     return 0;
 }

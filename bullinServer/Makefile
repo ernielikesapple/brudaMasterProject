@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -c #-Wall #-Werror   #usage??
+CXXFLAGS = -std=c++11 -c #-Wall #-Werror   #usage??
 
 all: bbserv
 
