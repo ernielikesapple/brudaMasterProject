@@ -33,6 +33,7 @@
 		561EC9AA24B57C4D00DB01AB /* textHolders */ = {isa = PBXFileReference; lastKnownFileType = text; path = textHolders; sourceTree = "<group>"; };
 		561EC9B424B60E5300DB01AB /* TcpUtils.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TcpUtils.cpp; sourceTree = "<group>"; };
 		561EC9B524B60E5300DB01AB /* TcpUtils.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = TcpUtils.hpp; sourceTree = "<group>"; };
+		5679BBFD24BE06CE00158E97 /* triv_client */ = {isa = PBXFileReference; lastKnownFileType = folder; path = triv_client; sourceTree = "<group>"; };
 		56E88D34248B30C100E4F167 /* bullinServer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = bullinServer; sourceTree = BUILT_PRODUCTS_DIR; };
 		56E88D37248B30C100E4F167 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -67,6 +68,7 @@
 		56E88D36248B30C100E4F167 /* bullinServer */ = {
 			isa = PBXGroup;
 			children = (
+				5679BBFD24BE06CE00158E97 /* triv_client */,
 				561EC95A24B1695800DB01AB /* bbfile */,
 				56E88D37248B30C100E4F167 /* main.cpp */,
 				561EC9B424B60E5300DB01AB /* TcpUtils.cpp */,
