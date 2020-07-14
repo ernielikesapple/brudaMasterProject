@@ -1,0 +1,26 @@
+notice:
+1.before running the server, please make the config file is named like "bbserv.config"
+2.if you want to make the server run as a daemon service in linux/unix, make sure inside the bbserv.config file, rename the key value pair , "DAEMON = true" , like this.
+
+to start the server
+1. cd current directory on terminal
+2. run command "make clean"
+3. run command "make"
+4. run "./bbserv"
+
+for stop the server.
+1.open the file named "bbserv.pid", found out the pid number inside the
+2.
+
+
+to start and test the client
+1. cd under the folder "triv_client"
+2. run command "make clean"
+3. run command "make"
+4. run "./client 127.0.0.1 portnumber" # notice the port number depends on the config file in the bbserv.config??
+
+to stop the client
+1.control + c
+
+
+
