@@ -6,11 +6,12 @@ to start the server
 1. cd current directory on terminal
 2. run command "make clean"
 3. run command "make"
-4. run "./bbserv"
+4. run "./bbserv" (for more start up options , type "./bbserv -h")
+
 
 for stop the server.
-1.open the file named "bbserv.pid", found out the pid number inside the
-2.
+1.open the file named "bbserv.pid", found out the pid number inside the "bbserv.pid"
+2. run command "kill -QUIT yourPidNumber"
 
 
 to start and test the client
@@ -21,6 +22,19 @@ to start and test the client
 
 to stop the client
 1.control + c
+
+
+
+check the port is being used:
+1. to find out what process has a port open, run command "sudo lsof -nPi :yourPortNumber"
+2. close the port, run command "sudo kill -9 yourPIDnumber"
+3. see all listening ports' info: sudo lsof -nPi | grep LISTEN
+
+
+
+debugging:
+1.to check the daemon service is up : "ps aux" or "ps aux | grep yourDaemonServicePid"     #you can find yourDaemonServicePid inside the "bbserv.pid" after each successful server start up
+2.
 
 
 
