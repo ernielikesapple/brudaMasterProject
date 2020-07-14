@@ -174,7 +174,7 @@ int TcpUtils::recv_nonblock (const int sd, char* buf, const size_t max, const in
     if (polled == -1)
         return -1;
     
-    return recv(sd,buf,max,0);
+    return (int)recv(sd,buf,max,0);
 }
 
 int TcpUtils::readline(const int fd, char* buf, const size_t max) {
@@ -183,7 +183,7 @@ int TcpUtils::readline(const int fd, char* buf, const size_t max) {
 
     for (i = 0; i < max; i++) {
         char tmp;
-        int what = read(fd,&tmp,1);
+        int what = (int)read(fd,&tmp,1);    // read nbyte max from the file descriptor, fd, into buf.
         if (what == -1)
             return -1;
         if (begin) {
@@ -193,12 +193,12 @@ int TcpUtils::readline(const int fd, char* buf, const size_t max) {
         }
         if (what == 0 || tmp == '\n') {
             buf[i] = '\0';
-            return i;
+            return (int)i;
         }
         buf[i] = tmp;
     }
     buf[i] = '\0';
-    return i;
+    return (int)i;
 }
 
 

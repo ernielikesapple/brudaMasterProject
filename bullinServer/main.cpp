@@ -168,9 +168,11 @@ int main(int argc, char** argv) {
         // insert server code here
         
         
+        int port = 9000;   // port to listen to
+        try { port = std::stoi(bp); } // The clients connect to our server on port bp.
+        catch (std::invalid_argument const &e) { std::cout << "Bad input: std::invalid_argument thrown" << '\n'; }
+        catch (std::out_of_range const &e) { std::cout << "Integer overflow: std::out_of_range thrown" << '\n'; }
         
-        
-        const int port = 9004;   // port to listen to
         const int qlen = 32;     // incoming connections queue length
 
         // Note that the following are local variable, and thus not shared
@@ -199,7 +201,7 @@ int main(int argc, char** argv) {
 
         while (1) {
           // Accept connection:
-          ssock = ::accept(msock, (struct sockaddr*)&client_addr, &client_addr_len);   //  the return value is a socket
+          ssock = ::accept((int)msock, (struct sockaddr*)&client_addr, &client_addr_len);   //  the return value is a socket
           if (ssock < 0) {
               if (errno == EINTR) continue;
               perror("accept");

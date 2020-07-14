@@ -13,15 +13,15 @@
 
 int main (int argc, char** argv) {
     const int ALEN = 256;
-    char req[ALEN];
-    char ans[ALEN];
+    char requestMessage[ALEN];
+    char answerFromServer[ALEN];
     
     if (argc != 3) {
-        printf("Usage: %s host port\n", basename(argv[0]));
+        printf("please use the correct input format->     Usage: %s host port\n", basename(argv[0]));
         return 1;
     }
 
-    int sd = connectbyport(argv[1],argv[2]);
+    int sd = connectbyport(argv[1],argv[2]);   // host and port number
     if (sd == err_host) {
         fprintf(stderr, "Cannot find host %s.\n", argv[1]);
         return 1;
@@ -36,7 +36,7 @@ int main (int argc, char** argv) {
     while (1) {
         int n;
         
-        while ((n = recv_nonblock(sd,ans,ALEN-1,500)) != recv_nodata) {
+        while ((n = recv_nonblock(sd,answerFromServer,ALEN-1,500)) != recv_nodata) {
             if (n == 0) {
                 shutdown(sd, SHUT_RDWR);
                 close(sd);
@@ -49,21 +49,21 @@ int main (int argc, char** argv) {
                 close(sd);
                 break;
             }
-            ans[n] = '\0';
-            printf("%s", ans);
+            answerFromServer[n] = '\0';
+            printf("%s", answerFromServer);
             fflush(stdout);
         }
 
         printf("> ");
         fflush(stdout);
-        fgets(req,256,stdin);
+        fgets(requestMessage,256,stdin);
         // eat up the terminating newline
-        if(strlen(req) > 0 && req[strlen(req) - 1] == '\n')
-            req[strlen(req) - 1] = '\0';
-        printf(" --> %s\n", req);
+        if(strlen(requestMessage) > 0 && requestMessage[strlen(requestMessage) - 1] == '\n')
+            requestMessage[strlen(requestMessage) - 1] = '\0';
+        printf(" --> %s\n", requestMessage);
         fflush(stdout);
         
-        send(sd,req,strlen(req),0);
+        send(sd,requestMessage,strlen(requestMessage),0);
         send(sd,"\n",1,0);
     }
 }
