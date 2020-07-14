@@ -9,9 +9,7 @@
 #include "TcpUtils.hpp"
 #include "fstream"
 #include <iostream>
-
-
-using namespace std;
+#include <stdio.h>
 
 #define NUll_POINTER 0
 
@@ -24,6 +22,18 @@ TcpUtils* TcpUtils::newAInstance() {
     }
     return singleton;
 }
+
+int TcpUtils::connectbyport(const char* host, const char* port) {
+    return connectbyportint(host,(unsigned short)atoi(port));
+}
+
+int TcpUtils::connectbyservice(const char* host, const char* service){
+    struct servent* sinfo = getservbyname(service,"tcp");  // service info
+    if (sinfo == NULL)
+        return err_proto;
+    return connectbyportint(host,(unsigned short)sinfo->s_port);
+}
+
 
 int TcpUtils::connectbyportint(const char* host, const unsigned short port) { // host either is a DNS entre, an actual readable name, "linux.ubishops.ca" or IP address in dexcible notation "122.12.24.22"
     struct hostent *hinfo;         // host information,              convert the DNS name into real decimal number
@@ -83,6 +93,116 @@ int TcpUtils::connectbyportint(const char* host, const unsigned short port) { //
     // done!
     return sd;
 }
+
+
+int TcpUtils::passivesocketstr(const char* port, const int backlog) {
+    return passivesocket((unsigned short)atoi(port), backlog);
+}
+
+int TcpUtils::passivesocketserv(const char* service, const int backlog) {
+    struct servent* sinfo = getservbyname(service,"tcp");  // service info
+    if (sinfo == NULL)
+        return err_proto;
+    return passivesocket((unsigned short)sinfo->s_port, backlog);
+}
+
+/*
+ * Helper function, contains the common code for passivesocket and
+ * controlsocket (which are identical except for the IP address they
+ * bind to).
+ */
+int TcpUtils::passivesockaux(const unsigned short port, const int backlog, const unsigned long int ip_addr) {
+    struct sockaddr_in sin;        // address to connect to
+    int    sd;                        // socket description to be returned
+    const int type = SOCK_STREAM;  // TCP connection              // tcp only at the moment, SOCK_STREAM is the type for TCP, connection oriented communication
+
+    memset(&sin, 0, sizeof(sin));  // needed for correct padding... (?),      // initiate the whole socket address structure with 0, 1st para is the pointer to a buffer(a block of memory), third para is the size of the buffer, middle para is the initialiaztion byte
+    sin.sin_family = AF_INET;
+    sin.sin_addr.s_addr = htonl(ip_addr);
+
+    sin.sin_port = (unsigned short)htons(port);
+
+    // allocate socket:
+    sd = socket(PF_INET, type, 0);
+    if ( sd < 0 )
+        return err_sock;
+    
+    // bind socket:
+    if ( ::bind(sd, (struct sockaddr *)&sin, sizeof(sin)) < 0 ) {
+        close(sd);
+        return err_bind;
+    }
+    // socket is listening:
+    if ( listen(sd, backlog) < 0 ) {
+        close(sd);
+        return err_listen;
+    }
+
+    // done!
+    return sd;
+}
+
+int TcpUtils::passivesocket(const unsigned short port, const int backlog) {
+    return passivesockaux(port, backlog, INADDR_ANY);      // INADDR_ANY if use this to the binding part, then it means you are making the socket available to all the IP for the connection
+}
+
+int TcpUtils::controlsocket(const unsigned short port, const int backlog) {
+    return passivesockaux(port, backlog, INADDR_LOOPBACK);
+}
+
+
+// https://stackoverflow.com/questions/27494629/how-can-i-use-poll-to-accept-multiple-clients-tcp-server-c
+/* Here is an example using "C" and "select" on Linux:
+
+http://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
+
+Here is an example using "poll":
+
+http://www-01.ibm.com/support/knowledgecenter/ssw_ibm_i_71/rzab6/poll.htm
+ */
+
+
+int TcpUtils::recv_nonblock (const int sd, char* buf, const size_t max, const int timeout) {
+    struct pollfd pollrec;
+    pollrec.fd = sd;
+    pollrec.events = POLLIN;
+    
+    int polled = poll(&pollrec,1,timeout);  // The poll() API allows the process to wait for an event to occur and to wake up the process when the event occurs.
+
+    if (polled == 0)
+        return recv_nodata;
+    if (polled == -1)
+        return -1;
+    
+    return recv(sd,buf,max,0);
+}
+
+int TcpUtils::readline(const int fd, char* buf, const size_t max) {
+    size_t i;
+    int begin = 1;
+
+    for (i = 0; i < max; i++) {
+        char tmp;
+        int what = read(fd,&tmp,1);
+        if (what == -1)
+            return -1;
+        if (begin) {
+            if (what == 0)
+                return recv_nodata;
+            begin = 0;
+        }
+        if (what == 0 || tmp == '\n') {
+            buf[i] = '\0';
+            return i;
+        }
+        buf[i] = tmp;
+    }
+    buf[i] = '\0';
+    return i;
+}
+
+
+
 
 
 void TcpUtils::printhelpFunction(void)

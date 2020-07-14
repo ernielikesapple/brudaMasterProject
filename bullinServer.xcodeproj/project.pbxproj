@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		561EC934248FF33F00DB01AB /* tcp-utils.cc in Sources */ = {isa = PBXBuildFile; fileRef = 561EC933248FF33F00DB01AB /* tcp-utils.cc */; };
 		561EC9A924B5733E00DB01AB /* ConfigFileHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 561EC9A824B5733E00DB01AB /* ConfigFileHandler.cpp */; };
 		561EC9B624B60E5300DB01AB /* TcpUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 561EC9B424B60E5300DB01AB /* TcpUtils.cpp */; };
 		56E88D38248B30C100E4F167 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 56E88D37248B30C100E4F167 /* main.cpp */; };
@@ -26,8 +25,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		561EC932248FF33F00DB01AB /* tcp-utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "tcp-utils.h"; sourceTree = "<group>"; };
-		561EC933248FF33F00DB01AB /* tcp-utils.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = "tcp-utils.cc"; sourceTree = "<group>"; };
 		561EC95824B0006300DB01AB /* bbserv.conf  */ = {isa = PBXFileReference; lastKnownFileType = text; path = "bbserv.conf "; sourceTree = "<group>"; };
 		561EC95924B1390100DB01AB /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		561EC95A24B1695800DB01AB /* bbfile */ = {isa = PBXFileReference; lastKnownFileType = text; path = bbfile; sourceTree = "<group>"; };
@@ -79,8 +76,6 @@
 				561EC95824B0006300DB01AB /* bbserv.conf  */,
 				561EC95924B1390100DB01AB /* Makefile */,
 				561EC9AA24B57C4D00DB01AB /* textHolders */,
-				561EC933248FF33F00DB01AB /* tcp-utils.cc */,
-				561EC932248FF33F00DB01AB /* tcp-utils.h */,
 			);
 			path = bullinServer;
 			sourceTree = "<group>";
@@ -144,7 +139,6 @@
 			files = (
 				561EC9A924B5733E00DB01AB /* ConfigFileHandler.cpp in Sources */,
 				561EC9B624B60E5300DB01AB /* TcpUtils.cpp in Sources */,
-				561EC934248FF33F00DB01AB /* tcp-utils.cc in Sources */,
 				56E88D38248B30C100E4F167 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
