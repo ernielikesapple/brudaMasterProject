@@ -5,7 +5,7 @@ LDFLAGS = -lpthread
 all: bbserv
 
 bbserv: main.o TcpUtils.o ConfigFileHandler.o
-	$(CXX) main.o TcpUtils.o ConfigFileHandler.o -o bbserv
+	$(CXX) $(LDFLAGS) main.o TcpUtils.o ConfigFileHandler.o -o bbserv
 
 main.o: main.cpp #add all the dependency
 	$(CXX) $(CXXFLAGS) main.cpp

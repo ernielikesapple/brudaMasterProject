@@ -191,7 +191,7 @@ int TcpUtils::readline(const int fd, char* buf, const size_t max) {
                 return recv_nodata;
             begin = 0;
         }
-        if (what == 0 || tmp == '\n') {
+        if (what == 0 || tmp == '\n') {    //  TODO: also need to handle '\r'  ??
             buf[i] = '\0';
             return (int)i;
         }
@@ -213,8 +213,8 @@ void TcpUtils::printhelpFunction(void)
     printf("   -c arg  (string)       overrides (or sets) the file name bbserv.conf  according to its argument\n");
     printf("   -T arg  (int)          overrides Tmax according to its argument\n");
     printf("   -t arg  (int)          overrides Tmax according to its argument\n");
-    printf("   -p arg  (int)          overrides the port number bp according to its argument \n");
-    printf("   -s arg  (int)          overrides the port number sp according to its argument \n");
+    printf("   -p arg  (int)          overrides the port number bp (port number for client server communication) according to its argument \n");
+    printf("   -s arg  (int)          overrides the port number sp (port number for server server communication) according to its argument \n");
     printf("   -f                     (with no argument) forces d to false or 0 \n");
     printf("   -d                     (with no argument) forces D to true or 1 \n");
     printf("   host:port              Any non-switch argument is further interpreted as a peer specification (and so must have the form host:port as explained above) \n");
