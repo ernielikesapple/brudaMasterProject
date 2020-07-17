@@ -166,22 +166,12 @@ int main(int argc, char** argv) {
         daemonize();
     }
 
-    /* Open system log and write message to it */
-    openlog(argv[0], LOG_PID|LOG_CONS, LOG_DAEMON);
-    syslog(LOG_INFO, "Started %s", app_name);
-    
     signal(SIGQUIT,signalHandlers); // Installs appropriate signal handlers for all the signals.
     signal(SIGHUP,signalHandlers);
     
     // TODO: START THE SERVER
     startServer();
     
-    
-    /* Write system log and close it. */
-    syslog(LOG_INFO, "Stopped %s", app_name);
-    closelog();
-    // Free allocated memory
-    //  if (PIDFile !=  NULL) {  delete PIDFile; }
     
     return 0;
 }
@@ -357,14 +347,14 @@ void* do_client (void* clientSocketPointer) {
 
 
 
-
-
-
-
 void signalHandlers(int sig) { //TODO: Handle all the signals
     
     // TODO: Closes all the master sockets
     // TODO: terminates all the preallocated threads
+    
+    for(std::vector<pthread_t>::iterator it = preallocatedThreadsPool.begin(); it != preallocatedThreadsPool.end(); ++it) {
+        preallocatedThreadsPool.erase(it);
+    }
     // TODO: closes all the connections to all the clients
     
     if (sig == SIGQUIT) { // Quit the daemon
@@ -396,30 +386,6 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
         // TODO: handle SIGCHLD
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -34,6 +34,7 @@
 		561EC9B524B60E5300DB01AB /* TcpUtils.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = TcpUtils.hpp; sourceTree = "<group>"; };
 		5679BBFD24BE06CE00158E97 /* triv_client */ = {isa = PBXFileReference; lastKnownFileType = folder; path = triv_client; sourceTree = "<group>"; };
 		5679BBFE24BE076800158E97 /* read.me */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = read.me; sourceTree = "<group>"; };
+		5679BC8324C20B7A00158E97 /* testsRubyClients.rb */ = {isa = PBXFileReference; lastKnownFileType = text.script.ruby; path = testsRubyClients.rb; sourceTree = "<group>"; };
 		56E88D34248B30C100E4F167 /* bullinServer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = bullinServer; sourceTree = BUILT_PRODUCTS_DIR; };
 		56E88D37248B30C100E4F167 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -77,6 +78,7 @@
 				561EC9A724B5733E00DB01AB /* ConfigFileHandler.hpp */,
 				561EC95824B0006300DB01AB /* bbserv.conf  */,
 				561EC95924B1390100DB01AB /* Makefile */,
+				5679BC8324C20B7A00158E97 /* testsRubyClients.rb */,
 				5679BBFE24BE076800158E97 /* read.me */,
 			);
 			path = bullinServer;
