@@ -10,7 +10,7 @@ to start the server
 
 
 for stop the server.
-1.open the file named "bbserv.pid", found out the pid number inside the "bbserv.pid"
+1. open the file named "bbserv.pid", found out the pid number inside the "bbserv.pid"
 2. run command "kill -QUIT yourPidNumber"
 
 
@@ -21,7 +21,7 @@ to start and test the client
 4. run "./client 127.0.0.1 portnumber" # notice the port number depends on the config file in the bbserv.config??
 
 to stop the client
-1.control + c
+1. control + c
 
 
 
@@ -32,9 +32,23 @@ check the port is being used:
 
 
 
-debugging:
-1.to check the daemon service is up : "ps aux" or "ps aux | grep yourDaemonServicePid"     #you can find yourDaemonServicePid inside the "bbserv.pid" after each successful server start up
-2.
+debugging on linux.ubishops.ca:
+
+step1 deploy the server
+1. download any ftp app, installed
+2. then choose ssh way to log into linux.ubishops.ca, username: firstname first letter plus lastname, for example like my name : hang(first name) cheng (last name),
+then the username is hcheng, password is "CS" plus your studentID.
+3. upload the code into your own folder
+
+step2 start the server and the client
+1. repeat the previous step in the read.me to start the server
+2. cd under the folder "triv_client", start the client.
+
+
+
+to check the daemon service pid (process id):
+1. to check the daemon service is up : "ps aux" or "ps aux | grep yourDaemonServicePid"     #you can find yourDaemonServicePid inside the "bbserv.pid" after each successful server start up
+
 
 
 

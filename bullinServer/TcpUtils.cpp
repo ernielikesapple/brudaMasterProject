@@ -10,24 +10,15 @@
 #include "fstream"
 #include <iostream>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define NUll_POINTER 0
 
-TcpUtils* TcpUtils::singleton = NUll_POINTER;
-
-
-TcpUtils* TcpUtils::newAInstance() {
-    if (singleton == NUll_POINTER) {
-        singleton = new TcpUtils;
-    }
-    return singleton;
-}
-
-int TcpUtils::connectbyport(const char* host, const char* port) {
+int connectbyport(const char* host, const char* port) {
     return connectbyportint(host,(unsigned short)atoi(port));
 }
 
-int TcpUtils::connectbyservice(const char* host, const char* service){
+int connectbyservice(const char* host, const char* service){
     struct servent* sinfo = getservbyname(service,"tcp");  // service info
     if (sinfo == NULL)
         return err_proto;
@@ -35,7 +26,7 @@ int TcpUtils::connectbyservice(const char* host, const char* service){
 }
 
 
-int TcpUtils::connectbyportint(const char* host, const unsigned short port) { // host either is a DNS entre, an actual readable name, "linux.ubishops.ca" or IP address in dexcible notation "122.12.24.22"
+int connectbyportint(const char* host, const unsigned short port) { // host either is a DNS entre, an actual readable name, "linux.ubishops.ca" or IP address in dexcible notation "122.12.24.22"
     struct hostent *hinfo;         // host information,              convert the DNS name into real decimal number
     struct sockaddr_in sin;        // address to connect to          assemble all the infomation together for indentifying the peer
     int sd;                        // socket descriptor to be returned
@@ -95,11 +86,11 @@ int TcpUtils::connectbyportint(const char* host, const unsigned short port) { //
 }
 
 
-int TcpUtils::passivesocketstr(const char* port, const int backlog) {
+int passivesocketstr(const char* port, const int backlog) {
     return passivesocket((unsigned short)atoi(port), backlog);
 }
 
-int TcpUtils::passivesocketserv(const char* service, const int backlog) {
+int passivesocketserv(const char* service, const int backlog) {
     struct servent* sinfo = getservbyname(service,"tcp");  // service info
     if (sinfo == NULL)
         return err_proto;
@@ -111,7 +102,7 @@ int TcpUtils::passivesocketserv(const char* service, const int backlog) {
  * controlsocket (which are identical except for the IP address they
  * bind to).
  */
-int TcpUtils::passivesockaux(const unsigned short port, const int backlog, const unsigned long int ip_addr) {
+int passivesockaux(const unsigned short port, const int backlog, const unsigned long int ip_addr) {
     struct sockaddr_in sin;        // address to connect to
     int    sd;                        // socket description to be returned
     const int type = SOCK_STREAM;  // TCP connection              // tcp only at the moment, SOCK_STREAM is the type for TCP, connection oriented communication
@@ -126,6 +117,10 @@ int TcpUtils::passivesockaux(const unsigned short port, const int backlog, const
     sd = socket(PF_INET, type, 0);
     if ( sd < 0 )
         return err_sock;
+    
+    // reusable socket   // TODO: Retest this part again,
+    int reuse = 1;
+    setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
     
     // bind socket:
     if ( ::bind(sd, (struct sockaddr *)&sin, sizeof(sin)) < 0 ) {
@@ -142,11 +137,11 @@ int TcpUtils::passivesockaux(const unsigned short port, const int backlog, const
     return sd;
 }
 
-int TcpUtils::passivesocket(const unsigned short port, const int backlog) {
+int passivesocket(const unsigned short port, const int backlog) {
     return passivesockaux(port, backlog, INADDR_ANY);      // INADDR_ANY if use this to the binding part, then it means you are making the socket available to all the IP for the connection
 }
 
-int TcpUtils::controlsocket(const unsigned short port, const int backlog) {
+int  ontrolsocket(const unsigned short port, const int backlog) {
     return passivesockaux(port, backlog, INADDR_LOOPBACK);
 }
 
@@ -162,7 +157,7 @@ http://www-01.ibm.com/support/knowledgecenter/ssw_ibm_i_71/rzab6/poll.htm
  */
 
 
-int TcpUtils::recv_nonblock (const int sd, char* buf, const size_t max, const int timeout) {
+int recv_nonblock (const int sd, char* buf, const size_t max, const int timeout) {
     struct pollfd pollrec;
     pollrec.fd = sd;
     pollrec.events = POLLIN;
@@ -177,7 +172,7 @@ int TcpUtils::recv_nonblock (const int sd, char* buf, const size_t max, const in
     return (int)recv(sd,buf,max,0);
 }
 
-int TcpUtils::readline(const int fd, char* buf, const size_t max) {
+int readline(const int fd, char* buf, const size_t max) {
     size_t i;
     int begin = 1;
 
@@ -202,10 +197,7 @@ int TcpUtils::readline(const int fd, char* buf, const size_t max) {
 }
 
 
-
-
-
-void TcpUtils::printhelpFunction(void)
+void printhelpFunction(void)
 {
     printf("\n Usage: [OPTIONS] [Argh]\n\n");
     printf("  Options:\n");
@@ -219,4 +211,42 @@ void TcpUtils::printhelpFunction(void)
     printf("   -d                     (with no argument) forces D to true or 1 \n");
     printf("   host:port              Any non-switch argument is further interpreted as a peer specification (and so must have the form host:port as explained above) \n");
     printf("\n");
+}
+
+node_t* head = NULL;
+node_t* tail = NULL;
+
+void enqueue(int *client_socket) {
+    node_t* newnode = (node_t* )malloc(sizeof(node_t));
+    newnode->client_socket = client_socket;
+    newnode->next = NULL;
+    if (tail == NULL) {
+        head = newnode;
+    } else {
+        tail->next = newnode;
+    }
+    tail = newnode;
+}
+
+int* dequue() {
+    if (head == NULL) {
+        return NULL;
+    } else {
+        int *result = head->client_socket;
+        node_t *temp = head;
+        head = head->next;
+        if (head == NULL) {
+            tail = NULL;
+        }
+        free(temp);
+        return result;
+    }
+}
+
+TcpUtils* TcpUtils::singleton = NUll_POINTER;
+TcpUtils* TcpUtils::newAInstance() {
+    if (singleton == NUll_POINTER) {
+        singleton = new TcpUtils;
+    }
+    return singleton;
 }
