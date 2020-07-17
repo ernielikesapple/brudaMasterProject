@@ -19,3 +19,5 @@ ConfigFileHandler.o: ConfigFileHandler.cpp
 clean:
 	rm -rf *o bbserv \
 
+distclean: clean
+	rm -f *.log *.pid

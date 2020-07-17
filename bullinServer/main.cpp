@@ -134,6 +134,7 @@ int main(int argc, char** argv) {
                     break;
                 case '?':  // unknown option...
                         std::cerr << "Unknown option: '" << char(optopt) << "'!" << std::endl;
+                    exit(0);
                     break;
                 case 'h':  // help menu
                     printhelpFunction();
@@ -189,6 +190,7 @@ int main(int argc, char** argv) {
 void startServer() {
     running = 1;
     
+    //  use preallocated threads. The number of threads to be preallocated is Tmax, so that Tmax is also a limit on concurrency.
     int preallocatThreadsNumber = 20;
     try { preallocatThreadsNumber = std::stoi(Tmax); } // The clients connect to our server on port bp.
     catch (std::invalid_argument const &e) { std::cout << "Bad input: std::invalid_argument thrown" << '\n'; }
@@ -198,9 +200,7 @@ void startServer() {
     for(pthread_t i : preallocatedThreadsPool) {
         pthread_create(&i, NULL, threadFunctionUsedByThreadsPool, NULL);
     }
-    
-    std::cout << "size of the pool right now is ============" << preallocatedThreadsPool.size() << '\n';
-    
+        
     int port = 9000;   // port to listen to
     try { port = std::stoi(bp); } // The clients connect to our server on port bp.
     catch (std::invalid_argument const &e) { std::cout << "Bad input: std::invalid_argument thrown" << '\n'; }
@@ -258,6 +258,8 @@ void startServer() {
          
      }
      */
+        
+        
      // main thread continues with the loop...
     }
     
