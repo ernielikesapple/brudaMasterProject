@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <syslog.h>
 #include <signal.h>
+#include <queue>
 
 #include "TcpUtils.hpp"
 #include "ConfigFileHandler.hpp"
@@ -34,8 +35,10 @@ char const* bbservLogFile = "bbserv.log"; // redirct all the output to this file
 
 
 std::vector<pthread_t> preallocatedThreadsPool;
+std::queue<int> tcpQueue;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t condition_var = PTHREAD_COND_INITIALIZER;
+pthread_cond_t quit_condition_var = PTHREAD_COND_INITIALIZER;
 void* threadFunctionUsedByThreadsPool(void *arg);
 
 // server para
@@ -58,7 +61,7 @@ struct monitor_t {
 monitor_t mon;
 
 static int running = 0;
-
+int currentMasterSocket = 0;
 // all the singleTon
 TcpUtils* tcpUtils = TcpUtils::newAInstance();
 ConfigFileHandler* configFileHandler = ConfigFileHandler::newAInstance();
@@ -73,7 +76,7 @@ void closeServer();  // TODO: implement this function
 * The function that implements the monitor thread.
 */
 void* monitor (void* ignored);
-void* do_client (void* clientSocketPointer);
+void* do_client (int sd);
 
 int main(int argc, char** argv) {
     
@@ -180,22 +183,13 @@ int main(int argc, char** argv) {
 void startServer() {
     running = 1;
     
-    //  use preallocated threads. The number of threads to be preallocated is Tmax, so that Tmax is also a limit on concurrency.
-    int preallocatThreadsNumber = 20;
-    try { preallocatThreadsNumber = std::stoi(Tmax); } // The clients connect to our server on port bp.
-    catch (std::invalid_argument const &e) { std::cout << "Bad input: std::invalid_argument thrown" << '\n'; }
-    catch (std::out_of_range const &e) { std::cout << "Integer overflow: std::out_of_range thrown" << '\n'; }
-       
-    preallocatedThreadsPool.resize(preallocatThreadsNumber); // create a threadpoOl
-    for(pthread_t i : preallocatedThreadsPool) {
-        pthread_create(&i, NULL, threadFunctionUsedByThreadsPool, NULL);
-    }
+    
         
     int port = 9000;   // port to listen to
     try { port = std::stoi(bp); } // The clients connect to our server on port bp.
     catch (std::invalid_argument const &e) { std::cout << "Bad input: std::invalid_argument thrown" << '\n'; }
     catch (std::out_of_range const &e) { std::cout << "Integer overflow: std::out_of_range thrown" << '\n'; }
-
+    
     const int qlen = 32;     // incoming connections queue length
 
     // Note that the following are local variable, and thus not shared
@@ -208,6 +202,8 @@ void startServer() {
     unsigned int client_addr_len = sizeof(client_addr); // ... and its length
 
     msock = passivesocket(port,qlen);
+    currentMasterSocket = (int)msock;
+    std::cout << "======================currentMasterSocket============================"<< currentMasterSocket << '\n';
     if (msock < 0) {
      perror("passivesocket");
      
@@ -222,6 +218,17 @@ void startServer() {
 
     // Launch the monitor:
     pthread_create(&tt, &ta, monitor, NULL);
+    
+    //  use preallocated threads. The number of threads to be preallocated is Tmax, so that Tmax is also a limit on concurrency.
+    int preallocatThreadsNumber = 20;
+    try { preallocatThreadsNumber = std::stoi(Tmax); } // The clients connect to our server on port bp.
+    catch (std::invalid_argument const &e) { std::cout << "Bad input: std::invalid_argument thrown" << '\n'; }
+    catch (std::out_of_range const &e) { std::cout << "Integer overflow: std::out_of_range thrown" << '\n'; }
+       
+    preallocatedThreadsPool.resize(preallocatThreadsNumber); // create a threadpoOl
+    for(pthread_t i : preallocatedThreadsPool) {
+        pthread_create(&i, NULL, threadFunctionUsedByThreadsPool, NULL);
+    }
 
     while (1) {
         // Accept connection:
@@ -233,16 +240,15 @@ void startServer() {
         }
      
     //  incoming client will wait in the TCP queue until something becomes available
-    int* newClient = (int*)malloc(sizeof(int));
-    *newClient = ssock;
-        
+   
+    
     pthread_mutex_lock(&mutex); // one thread mess with the queue at one time
-    enqueue(newClient);
+    tcpQueue.push(ssock);
     pthread_cond_signal(&condition_var);
     pthread_mutex_unlock(&mutex);
-        
+    
     /*
-     // Create thread instead of fork:
+     // Create thread instead of fork:  no preallocation
      if ( pthread_create(&tt, &ta, (void* (*) (void*))do_client, (void*)ssock) != 0 ) {
          perror("pthread_create");
          
@@ -257,15 +263,27 @@ void startServer() {
 
 void* threadFunctionUsedByThreadsPool(void *arg) {
     while (true) {
-        int *newClient;
+        int newClient = 0;
         pthread_mutex_lock(&mutex);
-        if ((newClient = dequue()) == NULL) {  // can't get work from the queue then just wait
+        if (tcpQueue.empty()) {  // can't get work from the queue then just wait
             pthread_cond_wait(&condition_var, &mutex); // wait for the signal from other thread to deal with client otherwise sleep
-            newClient = dequue();
+            
+            newClient = tcpQueue.front();
+            tcpQueue.pop();
+            // check if it's the time to quit
+            
+             int quitFlage = newClient;
+             if (quitFlage == -10) {
+                pthread_cond_wait(&quit_condition_var, &mutex);
+                pthread_mutex_unlock(&mutex);
+                 pthread_detach(pthread_self());
+                  pthread_join(pthread_self(), NULL);
+            }
+             
         }
         pthread_mutex_unlock(&mutex);
         
-        if (newClient != NULL) {
+        if (newClient) {
             do_client(newClient);
         }
     }
@@ -281,9 +299,9 @@ void* threadFunctionUsedByThreadsPool(void *arg) {
  * connection.  Same as for the purely iterative or the multi-process
  * server.
  */
-void* do_client (void* clientSocketPointer) {
-    int sd = *((int*)clientSocketPointer);
-    free(clientSocketPointer);
+
+void* do_client (int sd) {
+    
     
     const int ALEN = 256;
     char req[ALEN];
@@ -349,12 +367,50 @@ void* do_client (void* clientSocketPointer) {
 
 void signalHandlers(int sig) { //TODO: Handle all the signals
     
-    // TODO: Closes all the master sockets
-    // TODO: terminates all the preallocated threads
+    printf("走这里1111");
+    shutdown(currentMasterSocket,1);
+    close(currentMasterSocket);
+   
+    int quitFlag = -10;
     
-    for(std::vector<pthread_t>::iterator it = preallocatedThreadsPool.begin(); it != preallocatedThreadsPool.end(); ++it) {
-        preallocatedThreadsPool.erase(it);
+    int preallocatThreadsNumber = 20;
+    try { preallocatThreadsNumber = std::stoi(Tmax); } // The clients connect to our server on port bp.
+    catch (std::invalid_argument const &e) { std::cout << "Bad input: std::invalid_argument thrown" << '\n'; }
+    catch (std::out_of_range const &e) { std::cout << "Integer overflow: std::out_of_range thrown" << '\n'; }
+    
+    int oldSock = 0;
+    while (!tcpQueue.empty()) {  // can't get work from the queue then just wait
+        oldSock = tcpQueue.front();
+        tcpQueue.pop();
+        shutdown(oldSock,1);
+        close(oldSock);
     }
+    
+    for (int i=0; i<=preallocatThreadsNumber; i++) {
+        pthread_mutex_lock(&mutex); // one thread mess with the queue at one time
+        
+        
+        tcpQueue.push(quitFlag);
+        
+        pthread_cond_signal(&quit_condition_var);
+        pthread_mutex_unlock(&mutex);
+    }
+  
+    
+    /*
+    for(pthread_t i : preallocatedThreadsPool) {
+           pthread_join(i, NULL);
+        free(&i);
+    }*/
+    
+    // preallocatedThreadsPool.clear();
+    // TODO: Closes all the master sockets
+    
+    
+    // TODO: terminates all the preallocated threads
+   
+    
+   
     // TODO: closes all the connections to all the clients
     
     if (sig == SIGQUIT) { // Quit the daemon
@@ -377,8 +433,9 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
         /* Reset signal handling to default behavior */
         signal(SIGINT, SIG_DFL);
     } else if (sig == SIGHUP) {
-        
-        loadConfigFile(); // reload the config file
+        std::cout << "---------------------------3333333------------------------------------ " << bp << std::endl;
+        loadConfigFile(); // reload the config file // TODO: need to fix this bug after the server up ,  manually change the config file call SIGHUP again, can't read new conif content?
+        std::cout << "----------------------------------4444444----------------------------- " << bp << std::endl;
         startServer();
          
         
@@ -397,6 +454,7 @@ void loadConfigFile() {
         
         configFileHandler ->configFileValueGetter("THMAX", Tmax);  // get all the value from the map into all the variabbles on this page
         configFileHandler ->configFileValueGetter("BBPORT", bp);
+        std::cout << "00000000--------------------------------------------------------------- " << bp << std::endl;
         configFileHandler ->configFileValueGetter("SYNCPORT", sp);
         configFileHandler ->configFileValueGetter("BBFILE", bbfile);
         if (!std::ifstream(bbfile)) { // make sure the bbfile exist, so the server can start up normally

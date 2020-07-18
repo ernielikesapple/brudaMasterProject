@@ -161,7 +161,7 @@ const int err_listen  = -6;
     typedef struct node node_t;
     
     void enqueue(int *client_socket);
-    int* dequue();
+    int* dequeue();
 
 
 

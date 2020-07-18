@@ -1,6 +1,6 @@
 CXX = g++
 CXXFLAGS = -std=c++11 -c #-Wall #-Werror   #usage??
-LDFLAGS = -lpthread
+LDFLAGS = -pthread
 
 all: bbserv
 

@@ -228,7 +228,7 @@ void enqueue(int *client_socket) {
     tail = newnode;
 }
 
-int* dequue() {
+int* dequeue() {
     if (head == NULL) {
         return NULL;
     } else {
