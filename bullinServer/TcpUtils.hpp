@@ -153,15 +153,56 @@ const int err_listen  = -6;
 
     void printhelpFunction(void);
 
-    // an queue for the thread pool to pick the coming request
-    struct node {
-        struct node* next;
-        int *client_socket;
+
+
+
+
+
+    /*
+     * The structure implementing the access restrictions for a file.
+     * Also contains the file descriptor for the file (for easy access)
+     * and the name of the thing.
+     *
+     * The access control to files is implemented using a condition
+     * variable (basically, one can access the file iff nobody writes to
+     * it).
+     */
+    struct rwexcl_t {
+        pthread_mutex_t mutex;      // mutex for the whole structure
+        pthread_cond_t can_write;   // condition variable, name says it all
+        unsigned int reads;         // number of simultaneous reads (a write
+                                    // process should wait until this number is 0)
+        unsigned int owners;        // how many clients have the file opened
+        int fd;                     // the file descriptor (also used as
+                                    // file id for the clients)
+        char* name;                 // the (absolute) name of the file
     };
-    typedef struct node node_t;
-    
-    void enqueue(int *client_socket);
-    int* dequeue();
+
+    /*
+     * The access control structure for the opened files (initialized in
+     * the main function), and its size.
+     */
+    extern rwexcl_t** flocks;
+    extern size_t flocks_size;
+
+    /*
+     * nextarg(line, delim) looks for the first occurrence of `delim' in
+     * `line' and returns the index of the character just after this
+     * occurrence.  If no occurrence of `delim' exists in `line', or if
+     * the first occurrence of `delim' is the last character in the
+     * string, returns -1.
+     *
+     * This function is used to parse the client request.  If req is such
+     * a request, then &req[next_arg(req,' ')] is a string that contains
+     * whatever was sent by the client sans the name of the command, and
+     * so on.  The function is non destructive.
+     */
+    int next_arg(const char*, char);
+
+
+
+
+
 
 
 

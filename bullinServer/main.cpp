@@ -69,7 +69,7 @@ ConfigFileHandler* configFileHandler = ConfigFileHandler::newAInstance();
 void loadConfigFile();
 void daemonize();
 void signalHandlers(int sig);
-void startServer();
+void startServer(int msock);
 void closeServer();  // TODO: implement this function
 
 /*
@@ -172,19 +172,9 @@ int main(int argc, char** argv) {
     signal(SIGQUIT,signalHandlers); // Installs appropriate signal handlers for all the signals.
     signal(SIGHUP,signalHandlers);
     
-    // TODO: START THE SERVER
-    startServer();
+    // initializing
     
     
-    return 0;
-}
-
-
-void startServer() {
-    running = 1;
-    
-    
-        
     int port = 9000;   // port to listen to
     try { port = std::stoi(bp); } // The clients connect to our server on port bp.
     catch (std::invalid_argument const &e) { std::cout << "Bad input: std::invalid_argument thrown" << '\n'; }
@@ -195,29 +185,39 @@ void startServer() {
     // Note that the following are local variable, and thus not shared
     // between threads; especially important for ssock and client_addr.
 
-    long int msock;               // master and slave socket
-    int ssock;
-
-    struct sockaddr_in client_addr; // the address of the client...
-    unsigned int client_addr_len = sizeof(client_addr); // ... and its length
-
+    int msock;               // master and slave socket
     msock = passivesocket(port,qlen);
     currentMasterSocket = (int)msock;
     std::cout << "======================currentMasterSocket============================"<< currentMasterSocket << '\n';
     if (msock < 0) {
      perror("passivesocket");
-     
     }
+    // TODO: START THE SERVER
     printf("Server up and listening on port %d.\n", port);
-
     // Setting up the thread creation:
     pthread_t tt;
     pthread_attr_t ta;
     pthread_attr_init(&ta);
     pthread_attr_setdetachstate(&ta,PTHREAD_CREATE_DETACHED);
-
     // Launch the monitor:
     pthread_create(&tt, &ta, monitor, NULL);
+    
+    startServer(msock);
+    
+    
+    
+    
+    
+    return 0;
+}
+
+
+void startServer(int msock) {
+    running = 1;
+    
+    int ssock;
+    struct sockaddr_in client_addr; // the address of the client...
+    unsigned int client_addr_len = sizeof(client_addr); // ... and its length
     
     //  use preallocated threads. The number of threads to be preallocated is Tmax, so that Tmax is also a limit on concurrency.
     int preallocatThreadsNumber = 20;
@@ -238,10 +238,7 @@ void startServer() {
          perror("accept");
          
         }
-     
     //  incoming client will wait in the TCP queue until something becomes available
-   
-    
     pthread_mutex_lock(&mutex); // one thread mess with the queue at one time
     tcpQueue.push(ssock);
     pthread_cond_signal(&condition_var);
@@ -272,13 +269,15 @@ void* threadFunctionUsedByThreadsPool(void *arg) {
             tcpQueue.pop();
             // check if it's the time to quit
             
+            // TODO: REDO part 1.4 for the current management part, especially for destorying the thread pool
+            /*
              int quitFlage = newClient;
              if (quitFlage == -10) {
                 pthread_cond_wait(&quit_condition_var, &mutex);
-                pthread_mutex_unlock(&mutex);
                  pthread_detach(pthread_self());
                   pthread_join(pthread_self(), NULL);
             }
+             */
              
         }
         pthread_mutex_unlock(&mutex);
@@ -367,10 +366,11 @@ void* do_client (int sd) {
 
 void signalHandlers(int sig) { //TODO: Handle all the signals
     
-    printf("走这里1111");
+    // deinitialize everything and destruct everything
     shutdown(currentMasterSocket,1);
     close(currentMasterSocket);
-   
+    // TODO: REDO part 1.4 for the current management part, especially for destorying the thread pool
+    /*
     int quitFlag = -10;
     
     int preallocatThreadsNumber = 20;
@@ -388,14 +388,11 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
     
     for (int i=0; i<=preallocatThreadsNumber; i++) {
         pthread_mutex_lock(&mutex); // one thread mess with the queue at one time
-        
-        
         tcpQueue.push(quitFlag);
-        
         pthread_cond_signal(&quit_condition_var);
         pthread_mutex_unlock(&mutex);
     }
-  
+     */
     
     /*
     for(pthread_t i : preallocatedThreadsPool) {
@@ -436,7 +433,8 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
         std::cout << "---------------------------3333333------------------------------------ " << bp << std::endl;
         loadConfigFile(); // reload the config file // TODO: need to fix this bug after the server up ,  manually change the config file call SIGHUP again, can't read new conif content?
         std::cout << "----------------------------------4444444----------------------------- " << bp << std::endl;
-        startServer();
+        //  initializeServer();
+        //  startServer();
          
         
     } else if (sig == SIGCHLD) {

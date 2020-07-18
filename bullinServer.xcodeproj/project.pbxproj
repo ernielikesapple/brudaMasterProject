@@ -25,7 +25,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		561EC95824B0006300DB01AB /* bbserv.conf  */ = {isa = PBXFileReference; lastKnownFileType = text; path = "bbserv.conf "; sourceTree = "<group>"; };
 		561EC95924B1390100DB01AB /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		561EC95A24B1695800DB01AB /* bbfile */ = {isa = PBXFileReference; lastKnownFileType = text; path = bbfile; sourceTree = "<group>"; };
 		561EC9A724B5733E00DB01AB /* ConfigFileHandler.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ConfigFileHandler.hpp; sourceTree = "<group>"; };
@@ -35,6 +34,7 @@
 		5679BBFD24BE06CE00158E97 /* triv_client */ = {isa = PBXFileReference; lastKnownFileType = folder; path = triv_client; sourceTree = "<group>"; };
 		5679BBFE24BE076800158E97 /* read.me */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = read.me; sourceTree = "<group>"; };
 		5679BC8324C20B7A00158E97 /* testsRubyClients.rb */ = {isa = PBXFileReference; lastKnownFileType = text.script.ruby; path = testsRubyClients.rb; sourceTree = "<group>"; };
+		5679BC9F24C2758B00158E97 /* bbserv.conf */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bbserv.conf; sourceTree = "<group>"; };
 		56E88D34248B30C100E4F167 /* bullinServer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = bullinServer; sourceTree = BUILT_PRODUCTS_DIR; };
 		56E88D37248B30C100E4F167 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -76,7 +76,7 @@
 				561EC9B524B60E5300DB01AB /* TcpUtils.hpp */,
 				561EC9A824B5733E00DB01AB /* ConfigFileHandler.cpp */,
 				561EC9A724B5733E00DB01AB /* ConfigFileHandler.hpp */,
-				561EC95824B0006300DB01AB /* bbserv.conf  */,
+				5679BC9F24C2758B00158E97 /* bbserv.conf */,
 				561EC95924B1390100DB01AB /* Makefile */,
 				5679BC8324C20B7A00158E97 /* testsRubyClients.rb */,
 				5679BBFE24BE076800158E97 /* read.me */,
