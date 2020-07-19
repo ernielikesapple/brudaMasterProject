@@ -214,7 +214,53 @@ void printhelpFunction(void)
 }
 
 
+int next_arg(const char* line, char delim) {
+    int arg_index = 0;
+   //  char msg[MAX_LEN];  // logger string
 
+    // look for delimiter (or for the end of line, whichever happens first):
+    while ( line[arg_index] != '\0' && line[arg_index] != delim)
+        arg_index++;
+    // if at the end of line, return -1 (no argument):
+    if (line[arg_index] == '\0') {
+        
+        /* DEBUG_COMM */
+        /*
+        if (debugs[DEBUG_COMM]) {
+            snprintf(msg, MAX_LEN, "%s: next_arg(%s, %c): no argument\n", __FILE__, line ,delim);
+            logger(msg);
+        }
+        */
+        
+        return -1;
+    }
+    // we have the index of the delimiter, we need the index of the next
+    // character:
+    arg_index++;
+    // empty argument = no argument...
+    if (line[arg_index] == '\0') {
+        
+        /* DEBUG_COMM */
+        /*
+        if (debugs[DEBUG_COMM]) {
+            snprintf(msg, MAX_LEN, "%s: next_arg(%s, %c): no argument\n", __FILE__, line ,delim);
+            logger(msg);
+        }
+        */
+        
+        return -1;
+    }
+    
+    /* DEBUG_COMM */
+    /*
+    if (debugs[DEBUG_COMM]) {
+        snprintf(msg, MAX_LEN, "%s: next_arg(%s, %c): split at %d\n", __FILE__, line ,delim, arg_index);
+        logger(msg);
+    }
+    */
+    
+    return arg_index;
+}
 
 
 

@@ -21,7 +21,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-
+#include <map>
 /*** Error codes: ***/
 
 /* See below for what they mean. */
@@ -154,10 +154,11 @@ const int err_listen  = -6;
     void printhelpFunction(void);
 
 
-
-
-
-
+    struct User {
+        std::string username;
+        std::map<int, std::string> messagesMap; // messageID, messageContent
+    };
+    
     /*
      * The structure implementing the access restrictions for a file.
      * Also contains the file descriptor for the file (for easy access)
@@ -198,6 +199,7 @@ const int err_listen  = -6;
      * so on.  The function is non destructive.
      */
     int next_arg(const char*, char);
+    const size_t MAX_LEN = 1024;
 
 
 

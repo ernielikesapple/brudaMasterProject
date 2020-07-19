@@ -60,7 +60,7 @@ struct monitor_t {
 // Monitor statistics:
 monitor_t mon;
 
-static int running = 0;
+bool running = 0;
 int currentMasterSocket = 0;
 // all the singleTon
 TcpUtils* tcpUtils = TcpUtils::newAInstance();
@@ -213,7 +213,6 @@ int main(int argc, char** argv) {
 
 
 void startServer(int msock) {
-    running = 1;
     
     int ssock;
     struct sockaddr_in client_addr; // the address of the client...
@@ -236,13 +235,15 @@ void startServer(int msock) {
         if (ssock < 0) {
          if (errno == EINTR) continue;
          perror("accept");
-         
+         running =0;
+         exit(0);
         }
     //  incoming client will wait in the TCP queue until something becomes available
     pthread_mutex_lock(&mutex); // one thread mess with the queue at one time
     tcpQueue.push(ssock);
     pthread_cond_signal(&condition_var);
     pthread_mutex_unlock(&mutex);
+    running = 1;
     
     /*
      // Create thread instead of fork:  no preallocation
@@ -301,11 +302,13 @@ void* threadFunctionUsedByThreadsPool(void *arg) {
 
 void* do_client (int sd) {
     
-    
-    const int ALEN = 256;
-    char req[ALEN];
-    const char* ack = "ACK: ";
+    char req[MAX_LEN];   // the content sent by the client
+    // const char* ack = "ACK: ";
     int n;
+    // make sure req is null-terminated...
+    req[MAX_LEN-1] = '\0';
+    struct User user;
+    user.username = "nobody";
     time_t start = time(0);
 
     printf("Incoming client...\n");
@@ -316,8 +319,17 @@ void* do_client (int sd) {
     // monitor code ends
 
     // Loop while the client has something to say...
-    while ((n = readline(sd,req,ALEN-1)) != recv_nodata) {
-        if (strcmp(req,"quit") == 0) {
+    while ((n = readline(sd,req,MAX_LEN-1)) != recv_nodata) {
+        std::string ans = "default text";
+        // If we talk to telnet, we get \r\n at the end of the line
+        // instead of just \n, so we take care of the possible \r:
+        if ( n > 1 && req[n-1] == '\r' )
+            req[n-1] = '\0';
+        
+        if ( strncasecmp(req,"QUIT",strlen("QUIT")) == 0 ) {  // The strncasecmp() function is similar, except it only compares the first n bytes of req.
+            
+            send(sd,"BYE see you next time\r\n", strlen("BYE see you next time\r\n"),0);
+            
             printf("Received quit, sending EOF.\n");
             shutdown(sd,1);
             close(sd);
@@ -331,6 +343,51 @@ void* do_client (int sd) {
             // monitor code ends
             return NULL;
         }
+        
+        
+        else if (strncasecmp(req,"Greeting",strlen("Greeting")) == 0 ) {
+            ans = "0.0 greeting"; // TODO: change texts to summarize the com- mands available to clients.
+        }
+        
+        else if (strncasecmp(req,"USER",strlen("USER")) == 0 ) {
+            int nextArgIndex = next_arg(req,' ');
+            if (nextArgIndex == -1 ) {
+                snprintf(&ans[0],MAX_LEN,"FAIL %d USER requires a  username, Format: 'USER name'", EBADMSG);
+            }
+            else {
+                
+                std::string str(&req[nextArgIndex]);
+                size_t found = str.find("'/'");
+                if (found != std::string::npos) {
+                    snprintf(&ans[0],MAX_LEN,"FAIL %d USER's argument name is a string not containing the character /.", EBADMSG);
+                } else {
+                    user.username = &req[nextArgIndex];
+                    snprintf(&ans[0], MAX_LEN, "HELLO %s welcome to bbserv", user.username.c_str());
+                }
+            }
+        }
+        
+        else if (strncasecmp(req,"READ",strlen("READ")) == 0 ) {
+            int nextArgIndex = next_arg(req,' ');
+            std::string messageNumber(&req[nextArgIndex]);
+            ans = messageNumber;
+        }
+        
+        
+        else if (strncasecmp(req,"WRITE",strlen("WRITE")) == 0 ) {
+            int nextArgIndex = next_arg(req,' ');
+            std::string message(&req[nextArgIndex]);
+            ans = message;
+            
+        }
+        
+        else if (strncasecmp(req,"REPLACE",strlen("REPLACE")) == 0 ) {
+            int nextArgIndex = next_arg(req,' ');
+            std::string messageNumberPlusMessage(&req[nextArgIndex]);
+            ans = messageNumberPlusMessage;
+        }
+        
+        
         // monitor code begins
         pthread_mutex_lock(&mon.mutex);
         mon.bytecount += n;
