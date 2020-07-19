@@ -263,8 +263,142 @@ int next_arg(const char* line, char delim) {
 }
 
 
+/*
+ * Handles the FOPEN command.
+ *
+ * Allocates the access control structure, initializes the mutex and
+ * condition for the file given as argument, and opens the file for
+ * both reading and writing.  Returns the file descriptor or a
+ * negative number in case of failure.
+ */
+int file_init (const char* filename) {  // TODO: rename this function to bbfile related name
+    // char msg[MAX_LEN];  // logger string
+    //snprintf(msg, MAX_LEN, "%s: attempting to open %s\n", __FILE__, filename);
+    //logger(msg);
+
+    // at this file should be guaranteed not to be opened already
+    int fd = open(filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+    if ( fd == -1 ) {
+     //   snprintf(msg, MAX_LEN, "%s: open error: %s\n", __FILE__, strerror(errno));
+       // logger(msg);
+        return -1;
+    }
+
+    // now that we have a file we allocate and initialize the access
+    // control structure:
+    rwexcl_t* lck = new rwexcl_t;
+    pthread_mutex_init(&lck -> mutex, 0);
+    pthread_cond_init(&lck -> can_write,0);
+    lck -> reads = 0;
+    lck -> fd = fd;
+    lck -> owners = 1;
+    lck -> name = new char[strlen(filename) + 1];
+    strcpy(lck -> name, filename);
+
+    flocks[fd] = lck;
+    
+    
+    // snprintf(msg, MAX_LEN, "%s: %s opened on descriptor %d\n", __FILE__, filename, fd);
+   // logger(msg);
+    return fd;
+}
 
 
+// bbfile access control related methods:
+
+/*
+ * Handles the FCLOSE command.
+ *
+ * Physically closes the file iff the file has only one owner.
+ */
+int file_exit (int fd) {        // TODO: rename this function to bbfile related name
+    
+    
+    if (flocks[fd] == 0)
+        return err_nofile;
+    
+    // close is a major event, we treat it as a write.
+    // so we wait for everybody to finish working with the file
+    pthread_mutex_lock(&flocks[fd] -> mutex);
+    while (flocks[fd] -> reads != 0) {
+        // release the mutex while waiting...
+        pthread_cond_wait(&flocks[fd] -> can_write, &flocks[fd] -> mutex);
+    }
+    // now we have the mutex _and_ the condition, so we process the
+    // close event
+    flocks[fd] -> owners --;
+    if ( flocks[fd] -> owners != 0) {
+        
+        // this might have released the file for access, so we
+        // broadcast the condition to unlock whatever process happens
+        // to wait for us.
+        pthread_cond_broadcast(&flocks[fd] -> can_write);
+        pthread_mutex_unlock(&flocks[fd] -> mutex);
+        return 0;
+    }
+    // no other client is accessing this file, we destroy the
+    // descriptor
+
+    int closed = close(flocks[fd] -> fd);
+    delete[] flocks[fd] -> name;
+    delete flocks[fd];
+    flocks[fd] = 0;
+    
+
+    // Note: mutex destroyed, no need to unlock
+    return closed;
+}
+
+std::string bbfileReader (std::string filename, int fd, std::string messageNumber) { 
+    std::string returnString = "";
+    if (flocks[fd] == 0)
+        return "ERROR READ can't find designated file (bbfile)";
+    
+    pthread_mutex_lock(&flocks[fd] -> mutex);
+    // We increment the number of concurrent reads, so that a write
+    // request knows to wait after us.
+    flocks[fd] -> reads ++;
+    pthread_mutex_unlock(&flocks[fd] -> mutex);
+    
+    // do the read operation with bbfile
+    std::fstream bbFile;
+    bbFile.open(filename.c_str(),std::ios::in);
+    if (bbFile.fail()) {
+        returnString = "ERROR READ can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
+    }
+    
+    std::string line;
+    while ( getline (bbFile,line) )
+    {
+        size_t found = line.find(messageNumber);
+        if (found != std::string::npos) {
+            size_t foundSlash= line.find_first_of('/');
+            std::string posterNmessage = line.substr(foundSlash, line.length());
+            returnString = "MESSAGE " + messageNumber + " " + posterNmessage; // notice don't return before hit the lines of code with mutex
+        } else {
+            returnString = "UNKNOWN " + messageNumber + " can't find the designated message corresponding to this message number"; // notice don't return before hit the lines of code with mutex
+        }
+    }
+    
+    // we are done with the file, we first signal the condition
+    // variable and then we return.
+    pthread_mutex_lock(&flocks[fd] -> mutex);
+    flocks[fd] -> reads --;
+    // this might have released the file for write access, so we
+    // broadcast the condition to unlock whatever writing process
+    // happens to wait after us.
+    if (flocks[fd] -> reads == 0)
+        pthread_cond_broadcast(&flocks[fd] -> can_write);
+    pthread_mutex_unlock(&flocks[fd] -> mutex);
+    
+    return returnString;
+}
+
+
+int bbfileWritter (std::string filename, int fd) {  // TODO: Modify this methods need write mutex
+    // notice don't return before hit the lines of code with mutex
+    return 1;
+}
 
 TcpUtils* TcpUtils::singleton = NUll_POINTER;
 TcpUtils* TcpUtils::newAInstance() {

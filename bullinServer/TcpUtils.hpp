@@ -183,7 +183,7 @@ const int err_listen  = -6;
      * The access control structure for the opened files (initialized in
      * the main function), and its size.
      */
-    extern rwexcl_t** flocks;
+    extern rwexcl_t** flocks;  // TODO: rename this to bbfileLock
     extern size_t flocks_size;
 
     /*
@@ -201,9 +201,20 @@ const int err_listen  = -6;
     int next_arg(const char*, char);
     const size_t MAX_LEN = 1024;
 
+    
 
 
+    // bbfile related access control  // TODO: rename all these methods to bbfile...
+    int file_init (const char* filename);
+    int file_exit (int fd);
+    std::string bbfileReader (std::string filename, int fd, std::string messageNumber);
+    int bbfileWritter (std::string filename, int fd);  // TODO: Modify this methods need write mutex
 
+
+    /*
+     * Invalid descriptor error value.
+     */
+    const int err_nofile = -2;
 
 
 

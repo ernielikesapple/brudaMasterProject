@@ -38,7 +38,7 @@ std::vector<pthread_t> preallocatedThreadsPool;
 std::queue<int> tcpQueue;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t condition_var = PTHREAD_COND_INITIALIZER;
-pthread_cond_t quit_condition_var = PTHREAD_COND_INITIALIZER;
+// pthread_cond_t quit_condition_var = PTHREAD_COND_INITIALIZER;  TODO: deal with Sign hup,
 void* threadFunctionUsedByThreadsPool(void *arg);
 
 // server para
@@ -77,6 +77,15 @@ void closeServer();  // TODO: implement this function
 */
 void* monitor (void* ignored);
 void* do_client (int sd);
+
+/*
+ * The access control structure for the opened files (initialized in
+ * the main function), and its size.
+ */
+rwexcl_t** flocks;
+size_t flocks_size;
+
+
 
 int main(int argc, char** argv) {
     
@@ -214,6 +223,12 @@ int main(int argc, char** argv) {
 
 void startServer(int msock) {
     
+    // Initialize the file locking structure:
+    flocks_size = getdtablesize();
+    flocks = new rwexcl_t*[flocks_size];       // TODO: remember to delete this pointer when get signal like hup or sig quit
+    for (size_t i = 0; i < flocks_size; i++)
+        flocks[i] = 0;                     // Make all the element inside flocks[] a NULL pointer
+    
     int ssock;
     struct sockaddr_in client_addr; // the address of the client...
     unsigned int client_addr_len = sizeof(client_addr); // ... and its length
@@ -305,12 +320,19 @@ void* do_client (int sd) {
     char req[MAX_LEN];   // the content sent by the client
     // const char* ack = "ACK: ";
     int n;
+    
+    
+    bool* opened_fds = new bool[flocks_size];
+    for (size_t i = 0; i < flocks_size; i++)
+        opened_fds[i] = false;
+     
     // make sure req is null-terminated...
     req[MAX_LEN-1] = '\0';
+    
     struct User user;
     user.username = "nobody";
+    
     time_t start = time(0);
-
     printf("Incoming client...\n");
     // monitor code begins
     pthread_mutex_lock(&mon.mutex);                    //  when u define a mutex, you will define a critical region
@@ -320,7 +342,7 @@ void* do_client (int sd) {
 
     // Loop while the client has something to say...
     while ((n = readline(sd,req,MAX_LEN-1)) != recv_nodata) {
-        std::string ans = "unrecognized commands ";
+        std::string ans = "unrecognized commands, type 'greeting' to look at the available commands ";
         // If we talk to telnet, we get \r\n at the end of the line
         // instead of just \n, so we take care of the possible \r:
         if ( n > 1 && req[n-1] == '\r' )
@@ -333,6 +355,12 @@ void* do_client (int sd) {
             printf("Received quit, sending EOF.\n");
             shutdown(sd,1);
             close(sd);
+            
+            for (size_t i = 0; i < flocks_size; i++)
+                if (opened_fds[i])
+                    file_exit((int)i);
+            delete[] opened_fds;
+            
             printf("Outgoing client...\n");
             // monitor code begins
             pthread_mutex_lock(&mon.mutex);
@@ -373,7 +401,46 @@ void* do_client (int sd) {
         else if (strncasecmp(req,"READ",strlen("READ")) == 0 ) {
             int nextArgIndex = next_arg(req,' ');
             std::string messageNumber(&req[nextArgIndex]);
-            ans = messageNumber;
+            
+            //  open file,
+            int fd = -1;
+            for (size_t i = 0; i < flocks_size; i++) {  // check if the bbfile is already opened?
+                if (flocks[i] != 0 && strcmp(&bbfile[0], flocks[i] -> name) == 0) {     // bbfile already open
+                    fd = (int)i;
+                    pthread_mutex_lock(&flocks[fd] -> mutex);
+                    if (! opened_fds[fd])  // file already opened by the same client?
+                        flocks[fd] -> owners ++;
+                    pthread_mutex_unlock(&flocks[fd] -> mutex);
+                    opened_fds[fd] = true;
+                    break;
+                }
+            }
+            if (fd >= 0) { // bbfile already opened
+                ans = bbfileReader(bbfile, fd, messageNumber);  // read file
+            }
+            else { // we open the file anew
+                fd = file_init(&bbfile[0]);
+                if (fd < 0) {
+                    ans = "ERROR READ, can't open the designated open file (bbfile)";
+                }
+                else { // first time open bbfile, and do the operation
+                    opened_fds[fd] = true;
+                    ans = bbfileReader(bbfile, fd, messageNumber);  // read file
+                }
+            }
+            
+            //  close file,
+            int result = file_exit(fd);
+            opened_fds[fd] = false;
+            if (result == err_nofile)
+                ans = "ERROR READ, can't find the designated open file (bbfile)";
+            else if (result < 0) {
+                ans = "ERROR READ, can't find the designated open file (bbfile)";
+            }
+            else {
+                // TODO: Print log bbfile is properly closed
+            }
+            
         }
         
         
@@ -381,6 +448,16 @@ void* do_client (int sd) {
             int nextArgIndex = next_arg(req,' ');
             std::string message(&req[nextArgIndex]);
             ans = message;
+            // TODO: open file,
+            
+            
+            // TODO: read file,
+            
+            
+            
+            // TODO: close file,
+            
+            
             
         }
         
@@ -388,6 +465,17 @@ void* do_client (int sd) {
             int nextArgIndex = next_arg(req,' ');
             std::string messageNumberPlusMessage(&req[nextArgIndex]);
             ans = messageNumberPlusMessage;
+            // TODO: open file,
+            
+            
+            // TODO: read file,
+            // TODO: search file,
+            // TODO: replace file,(write)
+            
+            
+            // TODO: close file,
+            
+            
         }
         
         
@@ -433,7 +521,6 @@ void* do_client (int sd) {
 
 
 void signalHandlers(int sig) { //TODO: Handle all the signals
-    
     // deinitialize everything and destruct everything
     shutdown(currentMasterSocket,1);
     close(currentMasterSocket);

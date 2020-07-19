@@ -60,7 +60,6 @@ int main (int argc, char** argv) {
         // eat up the terminating newline
         if(strlen(requestMessage) > 0 && requestMessage[strlen(requestMessage) - 1] == '\n')
             requestMessage[strlen(requestMessage) - 1] = '\0';
-        printf(" --> %s\n", requestMessage);
         fflush(stdout);
         
         send(sd,requestMessage,strlen(requestMessage),0);
