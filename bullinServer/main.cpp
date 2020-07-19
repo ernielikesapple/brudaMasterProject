@@ -320,7 +320,7 @@ void* do_client (int sd) {
 
     // Loop while the client has something to say...
     while ((n = readline(sd,req,MAX_LEN-1)) != recv_nodata) {
-        std::string ans = "default text";
+        std::string ans = "unrecognized commands ";
         // If we talk to telnet, we get \r\n at the end of the line
         // instead of just \n, so we take care of the possible \r:
         if ( n > 1 && req[n-1] == '\r' )
@@ -346,23 +346,26 @@ void* do_client (int sd) {
         
         
         else if (strncasecmp(req,"Greeting",strlen("Greeting")) == 0 ) {
-            ans = "0.0 greeting"; // TODO: change texts to summarize the com- mands available to clients.
+            std::string greetingResponse = "0.0 greeting";
+            ans = greetingResponse; // TODO: change texts to summarize the com- mands available to clients.
         }
         
         else if (strncasecmp(req,"USER",strlen("USER")) == 0 ) {
             int nextArgIndex = next_arg(req,' ');
+            
             if (nextArgIndex == -1 ) {
-                snprintf(&ans[0],MAX_LEN,"FAIL %d USER requires a  username, Format: 'USER name'", EBADMSG);
+                // TODO: response texts not in full length?
+                ans = "USER command requires a  username, Format: 'USER name'";
             }
             else {
-                
-                std::string str(&req[nextArgIndex]);
-                size_t found = str.find("'/'");
+                std::string str(&req[nextArgIndex]);  // &req[nextArgIndex] refers to whatever sent by the user after the USER commands, req[nextArgIndex] is the first letter of the word(which is after the USER commands) sent by user,
+                size_t found = str.find("/");
                 if (found != std::string::npos) {
-                    snprintf(&ans[0],MAX_LEN,"FAIL %d USER's argument name is a string not containing the character /.", EBADMSG);
+                    ans = "USER's argument name is a string not containing the character /.";
                 } else {
-                    user.username = &req[nextArgIndex];
-                    snprintf(&ans[0], MAX_LEN, "HELLO %s welcome to bbserv", user.username.c_str());
+                    std::string username(&req[nextArgIndex]);
+                    user.username = username;
+                    ans = "HELLO " + username + " welcome to bbserv";
                 }
             }
         }
@@ -395,10 +398,18 @@ void* do_client (int sd) {
         pthread_mutex_unlock(&mon.mutex);
         // monitor code ends
         
-        // TODO: Implemente the protocal details
+        
+       
+       
+        send(sd,&ans[0],ans.size(),0);
+        send(sd,"\r\n",2,0);        // telnet expects \r\n
+        // ans.clear();
+        // send(sd,"\n",1,0);
+        /*
         send(sd,ack,strlen(ack),0);
         send(sd,req,strlen(req),0);
         send(sd,"\n",1,0);
+         */
     }
     // read 0 bytes = EOF:
     printf("Connection closed by client.\n");
