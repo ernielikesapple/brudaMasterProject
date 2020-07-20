@@ -383,7 +383,7 @@ void* do_client (int sd) {
             
             if (nextArgIndex == -1 ) {
                 // TODO: response texts not in full length?
-                ans = "USER command requires a  username, Format: 'USER name'";
+                ans = "USER command requires a username, Format: 'USER name'";
             }
             else {
                 std::string str(&req[nextArgIndex]);  // &req[nextArgIndex] refers to whatever sent by the user after the USER commands, req[nextArgIndex] is the first letter of the word(which is after the USER commands) sent by user,
@@ -400,69 +400,111 @@ void* do_client (int sd) {
         
         else if (strncasecmp(req,"READ",strlen("READ")) == 0 ) {
             int nextArgIndex = next_arg(req,' ');
-            std::string messageNumber(&req[nextArgIndex]);
-            
-            //  open file,
-            int fd = -1;
-            for (size_t i = 0; i < flocks_size; i++) {  // check if the bbfile is already opened?
-                if (flocks[i] != 0 && strcmp(&bbfile[0], flocks[i] -> name) == 0) {     // bbfile already open
-                    fd = (int)i;
-                    pthread_mutex_lock(&flocks[fd] -> mutex);
-                    if (! opened_fds[fd])  // file already opened by the same client?
-                        flocks[fd] -> owners ++;
-                    pthread_mutex_unlock(&flocks[fd] -> mutex);
-                    opened_fds[fd] = true;
-                    break;
-                }
-            }
-            if (fd >= 0) { // bbfile already opened
-                ans = bbfileReader(bbfile, fd, messageNumber);  // read file
-            }
-            else { // we open the file anew
-                fd = file_init(&bbfile[0]);
-                if (fd < 0) {
-                    ans = "ERROR READ, can't open the designated open file (bbfile)";
-                }
-                else { // first time open bbfile, and do the operation
-                    opened_fds[fd] = true;
-                    ans = bbfileReader(bbfile, fd, messageNumber);  // read file
-                }
-            }
-            
-            //  close file,
-            int result = file_exit(fd);
-            opened_fds[fd] = false;
-            if (result == err_nofile)
-                ans = "ERROR READ, can't find the designated open file (bbfile)";
-            else if (result < 0) {
-                ans = "ERROR READ, can't find the designated open file (bbfile)";
+            if (nextArgIndex == -1) {
+                ans = "READ command requires a message number, Format: 'READ message-number'";
             }
             else {
-                // TODO: Print log bbfile is properly closed
+                std::string messageNumber(&req[nextArgIndex]);
+                
+                //  open file,
+                int fd = -1;
+                for (size_t i = 0; i < flocks_size; i++) {  // check if the bbfile is already opened?
+                    if (flocks[i] != 0 && strcmp(&bbfile[0], flocks[i] -> name) == 0) {     // bbfile already open
+                        fd = (int)i;
+                        pthread_mutex_lock(&flocks[fd] -> mutex);
+                        if (! opened_fds[fd])  // file already opened by the same client?
+                            flocks[fd] -> owners ++;
+                        pthread_mutex_unlock(&flocks[fd] -> mutex);
+                        opened_fds[fd] = true;
+                        break;
+                    }
+                }
+                if (fd >= 0) { // bbfile already opened
+                    ans = bbfileReader(bbfile, fd, messageNumber);  // read file
+                }
+                else { // we open the file anew
+                    fd = file_init(&bbfile[0]);
+                    if (fd < 0) {
+                        ans = "ERROR READ, can't open the designated open file (bbfile)";
+                    }
+                    else { // first time open bbfile, and do the operation
+                        opened_fds[fd] = true;
+                        ans = bbfileReader(bbfile, fd, messageNumber);  // read file
+                    }
+                }
+                
+                //  close file,
+                int result = file_exit(fd);
+                opened_fds[fd] = false;
+                if (result == err_nofile)
+                    ans = "ERROR READ, can't find the designated open file (bbfile)";
+                else if (result < 0) {
+                    ans = "ERROR READ, can't find the designated open file (bbfile)";
+                }
+                else {
+                    // TODO: Print log bbfile is properly closed
+                }
             }
-            
         }
         
         
         else if (strncasecmp(req,"WRITE",strlen("WRITE")) == 0 ) {
             int nextArgIndex = next_arg(req,' ');
-            std::string message(&req[nextArgIndex]);
-            ans = message;
-            // TODO: open file,
-            
-            
-            // TODO: read file,
-            
-            
-            
-            // TODO: close file,
-            
-            
-            
+            if (nextArgIndex == -1) {
+                ans = "WRITE command requires a message, Format: 'WRITE message'";
+            }
+            else {
+                std::string message(&req[nextArgIndex]);
+                
+                //  open file,
+                int fd = -1;
+                for (size_t i = 0; i < flocks_size; i++) {  // check if the bbfile is already opened?
+                    if (flocks[i] != 0 && strcmp(&bbfile[0], flocks[i] -> name) == 0) {     // bbfile already open
+                        fd = (int)i;
+                        pthread_mutex_lock(&flocks[fd] -> mutex);
+                        if (! opened_fds[fd])  // file already opened by the same client?
+                            flocks[fd] -> owners ++;
+                        pthread_mutex_unlock(&flocks[fd] -> mutex);
+                        opened_fds[fd] = true;
+                        break;
+                    }
+                }
+                if (fd >= 0) { // bbfile already opened
+                    ans = bbfileWritter(bbfile, fd, user.username, message);  // write file
+                }
+                else { // we open the file anew
+                    fd = file_init(&bbfile[0]);
+                    if (fd < 0) {
+                        ans = "ERROR READ, can't open the designated open file (bbfile)";
+                    }
+                    else { // first time open bbfile, and do the operation
+                        opened_fds[fd] = true;
+                        ans = bbfileWritter(bbfile, fd, user.username, message);   // read file
+                    }
+                }
+                
+                //  close file,
+                int result = file_exit(fd);
+                opened_fds[fd] = false;
+                if (result == err_nofile)
+                    ans = "ERROR READ, can't find the designated open file (bbfile)";
+                else if (result < 0) {
+                    ans = "ERROR READ, can't find the designated open file (bbfile)";
+                }
+                else {
+                    // TODO: Print log bbfile is properly closed
+                }
+            }
         }
         
         else if (strncasecmp(req,"REPLACE",strlen("REPLACE")) == 0 ) {
             int nextArgIndex = next_arg(req,' ');
+            if (nextArgIndex == -1) {
+                
+                ans = "REPLACE command requires a message, Format: 'REPLACE message-number/message'";
+                // TODO: ADD logic to check the user request has both message-number and message, need to check delimiter '/'
+            }
+            else {
             std::string messageNumberPlusMessage(&req[nextArgIndex]);
             ans = messageNumberPlusMessage;
             // TODO: open file,
@@ -474,7 +516,7 @@ void* do_client (int sd) {
             
             
             // TODO: close file,
-            
+            }
             
         }
         
@@ -521,6 +563,7 @@ void* do_client (int sd) {
 
 
 void signalHandlers(int sig) { //TODO: Handle all the signals
+    std::cout << "-------------signal coming--------------------------------- " << bp << std::endl;
     // deinitialize everything and destruct everything
     shutdown(currentMasterSocket,1);
     close(currentMasterSocket);
@@ -719,4 +762,11 @@ void* monitor (void* ignored) {
     }
     return 0;
 }
+
+
+
+
+
+
+
 

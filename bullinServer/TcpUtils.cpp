@@ -11,6 +11,8 @@
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctime>
+#include <sstream>
 
 #define NUll_POINTER 0
 
@@ -364,17 +366,17 @@ std::string bbfileReader (std::string filename, int fd, std::string messageNumbe
     std::fstream bbFile;
     bbFile.open(filename.c_str(),std::ios::in);
     if (bbFile.fail()) {
-        returnString = "ERROR READ can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
+        returnString = "ERROR READ can't find designated file (bbfile)";
     }
     
     std::string line;
     while ( getline (bbFile,line) )
-    {
-        size_t found = line.find(messageNumber);
+    {   size_t found = line.find(messageNumber);
         if (found != std::string::npos) {
             size_t foundSlash= line.find_first_of('/');
             std::string posterNmessage = line.substr(foundSlash, line.length());
             returnString = "MESSAGE " + messageNumber + " " + posterNmessage; // notice don't return before hit the lines of code with mutex
+            break;  // when found the message just get out the while and return the message
         } else {
             returnString = "UNKNOWN " + messageNumber + " can't find the designated message corresponding to this message number"; // notice don't return before hit the lines of code with mutex
         }
@@ -394,10 +396,43 @@ std::string bbfileReader (std::string filename, int fd, std::string messageNumbe
     return returnString;
 }
 
-
-int bbfileWritter (std::string filename, int fd) {  // TODO: Modify this methods need write mutex
+std::string bbfileWritter (std::string filename, int fd, std::string poster, std::string message) {
     // notice don't return before hit the lines of code with mutex
-    return 1;
+    std::string returnString = "";
+    
+    // do the read operation with bbfile
+    std::fstream bbFile;
+    bbFile.open(filename.c_str(),std::ios::in | std::ofstream::app);
+    if (bbFile.fail()) {
+        return "ERROR WRITE can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
+    }
+    
+    // The fact that only one thread writes at any given time is ensured
+    // by the fact that the successful thread does not release the mutex
+    // until the writing process is done.
+    pthread_mutex_lock(&flocks[fd] -> mutex);
+    // we wait for condition as long as somebody is doing things with
+    // the file
+    while (flocks[fd] -> reads != 0) {
+        // release the mutex while waiting...
+        pthread_cond_wait(&flocks[fd] -> can_write, &flocks[fd] -> mutex);
+    }
+    // now we have the mutex _and_ the condition, so we write
+    
+    std::time_t secondsSince1970 = std::time(0);
+    std::stringstream ss;
+    ss << secondsSince1970;
+    std::string uniqueMessageNumber = ss.str();
+    
+    bbFile << uniqueMessageNumber << "/" << poster << "/" << message << std::endl;
+    returnString = "WROTE " + uniqueMessageNumber;
+    // done writing.
+    // this might have released the file for access, so we broadcast the
+    // condition to unlock whatever process happens to wait for us.
+    pthread_cond_broadcast(&flocks[fd] -> can_write);
+    // we are done!
+    pthread_mutex_unlock(&flocks[fd] -> mutex);
+    return returnString;
 }
 
 TcpUtils* TcpUtils::singleton = NUll_POINTER;

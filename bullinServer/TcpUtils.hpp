@@ -208,7 +208,8 @@ const int err_listen  = -6;
     int file_init (const char* filename);
     int file_exit (int fd);
     std::string bbfileReader (std::string filename, int fd, std::string messageNumber);
-    int bbfileWritter (std::string filename, int fd);  // TODO: Modify this methods need write mutex
+    std::string bbfileWritter (std::string filename, int fd, std::string poster, std::string message);
+    
 
 
     /*
