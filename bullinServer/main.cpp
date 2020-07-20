@@ -348,7 +348,17 @@ void* do_client (int sd) {
 
     // Loop while the client has something to say...
     while ((n = readline(sd,req,MAX_LEN-1)) != recv_nodata) {
-        std::string ans = "unrecognized commands, type 'greeting' to look at the available commands ";
+        std::string usage = "Commands avaiable: \n";
+        std::string greetingsUsage = "Greeting \n";
+        std::string userUsage = "USER name \n";
+        std::string readUsage = "READ message-number \n";
+        std::string writeUsage = "WRITE message \n";
+        std::string replaceUsage = "REPLACE message-number/message \n";
+        std::string quitUsage = "QUIT text \n";
+        
+        usage = "Commands avaiable: \n"  +  greetingsUsage + userUsage + readUsage + writeUsage + replaceUsage + quitUsage;
+        std::string ans = "unrecognized commands \n\n" + usage;
+        
         // If we talk to telnet, we get \r\n at the end of the line
         // instead of just \n, so we take care of the possible \r:
         if ( n > 1 && req[n-1] == '\r' )
@@ -380,8 +390,19 @@ void* do_client (int sd) {
         
         
         else if (strncasecmp(req,"Greeting",strlen("Greeting")) == 0 ) {
-            std::string greetingResponse = "0.0 greeting";
-            ans = greetingResponse; // TODO: change texts to summarize the com- mands available to clients.
+            std::string greetingResponse = "0.0 greeting \n";
+            
+            std::string usage = "Commands avaiable: \n";
+            std::string greetingsUsage = "Greeting \n";
+            std::string userUsage = "USER name \n";
+            std::string readUsage = "READ message-number \n";
+            std::string writeUsage = "WRITE message \n";
+            std::string replaceUsage = "REPLACE message-number/message \n";
+            std::string quitUsage = "QUIT text \n";
+            
+            usage = "Commands avaiable: \n"  +  greetingsUsage + userUsage + readUsage + writeUsage + replaceUsage + quitUsage;
+            
+            ans = greetingResponse + usage;
         }
         
         else if (strncasecmp(req,"USER",strlen("USER")) == 0 ) {
@@ -515,7 +536,6 @@ void* do_client (int sd) {
                 if (foundSlash != std::string::npos) {
                     std::string messageNumber = messageNumberPlusMessage.substr(0, foundSlash);
                     std::string newMessage = messageNumberPlusMessage.substr(foundSlash + 1, messageNumberPlusMessage.length()); // + 1 to skip the orignal '/'
-                    std::cout << "now messageNumber ==外面====" << messageNumber << "now newMessage ==外面===="  << newMessage << std::endl;
                     if (messageNumber.length()>0 && newMessage.length()>0) {
                         //  open file,
                         int fd = -1;
