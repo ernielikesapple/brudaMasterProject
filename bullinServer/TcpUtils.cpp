@@ -356,18 +356,17 @@ std::string bbfileReader (std::string filename, int fd, std::string messageNumbe
     if (flocks[fd] == 0)
         return "ERROR READ can't find designated file (bbfile)";
     
+    std::fstream bbFile;
+    bbFile.open(filename.c_str(),std::ios::in);
+    if (bbFile.fail()) {
+        return "ERROR READ can't find designated file (bbfile)";
+    }
+    
     pthread_mutex_lock(&flocks[fd] -> mutex);
     // We increment the number of concurrent reads, so that a write
     // request knows to wait after us.
     flocks[fd] -> reads ++;
     pthread_mutex_unlock(&flocks[fd] -> mutex);
-    
-    // do the read operation with bbfile
-    std::fstream bbFile;
-    bbFile.open(filename.c_str(),std::ios::in);
-    if (bbFile.fail()) {
-        returnString = "ERROR READ can't find designated file (bbfile)";
-    }
     
     std::string line;
     while ( getline (bbFile,line) )
@@ -397,10 +396,12 @@ std::string bbfileReader (std::string filename, int fd, std::string messageNumbe
 }
 
 std::string bbfileWritter (std::string filename, int fd, std::string poster, std::string message) {
+    if (flocks[fd] == 0)
+    return "ERROR WRITE can't find designated file (bbfile)";
+    
     // notice don't return before hit the lines of code with mutex
     std::string returnString = "";
     
-    // do the read operation with bbfile
     std::fstream bbFile;
     bbFile.open(filename.c_str(),std::ios::in | std::ofstream::app);
     if (bbFile.fail()) {
@@ -434,6 +435,76 @@ std::string bbfileWritter (std::string filename, int fd, std::string poster, std
     pthread_mutex_unlock(&flocks[fd] -> mutex);
     return returnString;
 }
+
+std::string bbfileReplacer (std::string filename, int fd, std::string messageNumber, std::string newMessage, std::string newPoster) {
+    if (flocks[fd] == 0)
+    return "ERROR WRITE can't find designated file (bbfile)";
+
+    // notice don't return before hit the lines of code with mutex
+    std::string returnString = "";
+    
+    std::fstream bbFile;
+    bbFile.open(filename.c_str(),std::ios::in | std::ofstream::app);
+    if (bbFile.fail()) {
+        return "ERROR WRITE can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
+    }
+    
+    // The fact that only one thread writes at any given time is ensured
+    // by the fact that the successful thread does not release the mutex
+    // until the writing process is done.
+    pthread_mutex_lock(&flocks[fd] -> mutex);
+    // we wait for condition as long as somebody is doing things with
+    // the file
+    while (flocks[fd] -> reads != 0) {
+        // release the mutex while waiting...
+        pthread_cond_wait(&flocks[fd] -> can_write, &flocks[fd] -> mutex);
+    }
+    // now we have the mutex _and_ the condition, so we write
+    
+    
+    std::string bbfileContainer = "";
+    
+    std::string line;
+    bool foundMessageNumber = false;
+    while ( getline (bbFile,line) )
+    {   size_t foundMN = line.find(messageNumber);
+        if (foundMN != std::string::npos) {
+            size_t foundSlash= line.find_first_of('/');
+            std::string posterNmessage = line.substr(foundSlash, line.length());
+            
+            line.clear();
+            line = messageNumber + "/" + newPoster + "/" + newMessage;
+            foundMessageNumber = true;
+        }
+        bbfileContainer = bbfileContainer + line + "\n";
+    }
+    if (foundMessageNumber) {
+        returnString = "WROTE " + messageNumber;  // notice don't return before hit the lines of code with mutex
+        foundMessageNumber = false;
+    } else {
+        returnString = "UNKNOWN " + messageNumber + " can't find the designated message corresponding to this message number"; // notice don't return before hit the lines of code with mutex
+    }
+    bbFile.close();
+    
+    bbFile.open(filename.c_str(),std::ios::out);  // replace all the text in the text file again
+    if (bbFile.fail()) {
+        returnString = "Unable to find defaultConfig file 2";
+        // exit(0);
+    }
+    bbFile << bbfileContainer;
+    bbFile.close();
+    
+    // done writing.
+    // this might have released the file for access, so we broadcast the
+    // condition to unlock whatever process happens to wait for us.
+    pthread_cond_broadcast(&flocks[fd] -> can_write);
+    // we are done!
+    pthread_mutex_unlock(&flocks[fd] -> mutex);
+    return returnString;
+
+}
+
+
 
 TcpUtils* TcpUtils::singleton = NUll_POINTER;
 TcpUtils* TcpUtils::newAInstance() {

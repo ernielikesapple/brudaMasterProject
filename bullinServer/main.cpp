@@ -481,7 +481,7 @@ void* do_client (int sd) {
                 else { // we open the file anew
                     fd = file_init(&bbfile[0]);
                     if (fd < 0) {
-                        ans = "ERROR READ, can't open the designated open file (bbfile)";
+                        ans = "ERROR WRITE, can't open the designated open file (bbfile)";
                     }
                     else { // first time open bbfile, and do the operation
                         opened_fds[fd] = true;
@@ -493,9 +493,9 @@ void* do_client (int sd) {
                 int result = file_exit(fd);
                 opened_fds[fd] = false;
                 if (result == err_nofile)
-                    ans = "ERROR READ, can't find the designated open file (bbfile)";
+                    ans = "ERROR WRITE, can't find the designated open file (bbfile)";
                 else if (result < 0) {
-                    ans = "ERROR READ, can't find the designated open file (bbfile)";
+                    ans = "ERROR WRITE, can't find the designated open file (bbfile)";
                 }
                 else {
                     // TODO: Print log bbfile is properly closed
@@ -506,22 +506,62 @@ void* do_client (int sd) {
         else if (strncasecmp(req,"REPLACE",strlen("REPLACE")) == 0 ) {
             int nextArgIndex = next_arg(req,' ');
             if (nextArgIndex == -1) {
-                
                 ans = "REPLACE command requires a message, Format: 'REPLACE message-number/message'";
                 // TODO: ADD logic to check the user request has both message-number and message, need to check delimiter '/'
             }
             else {
-            std::string messageNumberPlusMessage(&req[nextArgIndex]);
-            ans = messageNumberPlusMessage;
-            // TODO: open file,
-            
-            
-            // TODO: read file,
-            // TODO: search file,
-            // TODO: replace file,(write)
-            
-            
-            // TODO: close file,
+                std::string messageNumberPlusMessage(&req[nextArgIndex]);
+                size_t foundSlash= messageNumberPlusMessage.find_first_of('/');
+                if (foundSlash != std::string::npos) {
+                    std::string messageNumber = messageNumberPlusMessage.substr(0, foundSlash);
+                    std::string newMessage = messageNumberPlusMessage.substr(foundSlash + 1, messageNumberPlusMessage.length()); // + 1 to skip the orignal '/'
+                    std::cout << "now messageNumber ==外面====" << messageNumber << "now newMessage ==外面===="  << newMessage << std::endl;
+                    if (messageNumber.length()>0 && newMessage.length()>0) {
+                        //  open file,
+                        int fd = -1;
+                        for (size_t i = 0; i < flocks_size; i++) {  // check if the bbfile is already opened?
+                            if (flocks[i] != 0 && strcmp(&bbfile[0], flocks[i] -> name) == 0) {     // bbfile already open
+                                fd = (int)i;
+                                pthread_mutex_lock(&flocks[fd] -> mutex);
+                                if (! opened_fds[fd])  // file already opened by the same client?
+                                    flocks[fd] -> owners ++;
+                                pthread_mutex_unlock(&flocks[fd] -> mutex);
+                                opened_fds[fd] = true;
+                                break;
+                            }
+                        }
+                        if (fd >= 0) { // bbfile already opened
+                            ans = bbfileReplacer(bbfile, fd, messageNumber, newMessage, user.username);  // replace file
+                        }
+                        else { // we open the file anew
+                            fd = file_init(&bbfile[0]);
+                            if (fd < 0) {
+                                ans = "ERROR WRITE, can't open the designated open file (bbfile)";
+                            }
+                            else { // first time open bbfile, and do the operation
+                                opened_fds[fd] = true;
+                                ans = bbfileReplacer(bbfile, fd, messageNumber, newMessage, user.username);  // replace file
+                            }
+                        }
+                        
+                        //  close file,
+                        int result = file_exit(fd);
+                        opened_fds[fd] = false;
+                        if (result == err_nofile)
+                            ans = "ERROR WRITE, can't find the designated open file (bbfile)";
+                        else if (result < 0) {
+                            ans = "ERROR WRITE, can't find the designated open file (bbfile)";
+                        }
+                        else {
+                            // TODO: Print log bbfile is properly closed
+                        }
+                        
+                    } else {
+                        ans = "REPLACE command requires a proper format to continue, Format: 'REPLACE message-number/message'";
+                    }
+                } else {
+                    ans = "REPLACE command requires a proper format to continue, Format: 'REPLACE message-number/message'";
+                }
             }
             
         }
@@ -533,9 +573,6 @@ void* do_client (int sd) {
         // TODO: write into bbfile
         pthread_mutex_unlock(&mon.mutex);
         // monitor code ends
-        
-        
-       
        
         send(sd,&ans[0],ans.size(),0);
         send(sd,"\r\n",2,0);        // telnet expects \r\n

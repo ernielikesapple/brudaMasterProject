@@ -215,7 +215,7 @@ const int err_listen  = -6;
     // 1.1 Application Protocol
     std::string bbfileReader (std::string filename, int fd, std::string messageNumber);
     std::string bbfileWritter (std::string filename, int fd, std::string poster, std::string message);
-    
+    std::string bbfileReplacer (std::string filename, int fd, std::string messageNumber, std::string newMessage, std::string newPoster);
 
 
     /*
