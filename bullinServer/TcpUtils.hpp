@@ -159,6 +159,10 @@ const int err_listen  = -6;
         std::map<int, std::string> messagesMap; // messageID, messageContent
     };
     
+
+
+
+    // 1.3 The Bulletin Board File
     /*
      * The structure implementing the access restrictions for a file.
      * Also contains the file descriptor for the file (for easy access)
@@ -203,10 +207,12 @@ const int err_listen  = -6;
 
     
 
-
+    // 1.1 Application Protocol
     // bbfile related access control  // TODO: rename all these methods to bbfile...
     int file_init (const char* filename);
     int file_exit (int fd);
+    
+    // 1.1 Application Protocol
     std::string bbfileReader (std::string filename, int fd, std::string messageNumber);
     std::string bbfileWritter (std::string filename, int fd, std::string poster, std::string message);
     

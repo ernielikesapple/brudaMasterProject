@@ -34,6 +34,7 @@ static int PIDFileDescriptor = -1;
 char const* bbservLogFile = "bbserv.log"; // redirct all the output to this file when under daemon mode
 
 
+// 1.4 Concurrency Management
 std::vector<pthread_t> preallocatedThreadsPool;
 std::queue<int> tcpQueue;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -60,15 +61,18 @@ struct monitor_t {
 // Monitor statistics:
 monitor_t mon;
 
+
 bool running = 0;
 int currentMasterSocket = 0;
 // all the singleTon
 TcpUtils* tcpUtils = TcpUtils::newAInstance();
 ConfigFileHandler* configFileHandler = ConfigFileHandler::newAInstance();
 
+// 1.5 Startup and Reconfiguration
 void loadConfigFile();
 void daemonize();
 void signalHandlers(int sig);
+
 void startServer(int msock);
 void closeServer();  // TODO: implement this function
 
@@ -78,6 +82,8 @@ void closeServer();  // TODO: implement this function
 void* monitor (void* ignored);
 void* do_client (int sd);
 
+
+// 1.3 The Bulletin Board File
 /*
  * The access control structure for the opened files (initialized in
  * the main function), and its size.
