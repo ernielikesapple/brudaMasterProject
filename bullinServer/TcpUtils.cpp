@@ -315,7 +315,6 @@ int file_init (const char* filename) {  // TODO: rename this function to bbfile 
  */
 int file_exit (int fd) {        // TODO: rename this function to bbfile related name
     
-    
     if (flocks[fd] == 0)
         return err_nofile;
     
@@ -356,17 +355,32 @@ std::string bbfileReader (std::string filename, int fd, std::string messageNumbe
     if (flocks[fd] == 0)
         return "ERROR READ can't find designated file (bbfile)";
     
-    std::fstream bbFile;
-    bbFile.open(filename.c_str(),std::ios::in);
-    if (bbFile.fail()) {
-        return "ERROR READ can't find designated file (bbfile)";
-    }
-    
     pthread_mutex_lock(&flocks[fd] -> mutex);
     // We increment the number of concurrent reads, so that a write
     // request knows to wait after us.
     flocks[fd] -> reads ++;
     pthread_mutex_unlock(&flocks[fd] -> mutex);
+
+    std::fstream bbFile;
+    bbFile.open(filename.c_str(),std::ios::in);
+    if (bbFile.fail()) {
+        // we are done with the file, we first signal the condition
+        // variable and then we return.
+        pthread_mutex_lock(&flocks[fd] -> mutex);
+        flocks[fd] -> reads --;
+        // this might have released the file for write access, so we
+        // broadcast the condition to unlock whatever writing process
+        // happens to wait after us.
+        if (flocks[fd] -> reads == 0)
+            pthread_cond_broadcast(&flocks[fd] -> can_write);
+        pthread_mutex_unlock(&flocks[fd] -> mutex);
+        return "ERROR READ can't find designated file (bbfile)";
+    }
+    
+    if (D) { // debug stand out put for testing access control
+       std::string logMessage = "beginning to read message \n";
+       logger(&logMessage[0]);
+    }
     
     std::string line;
     while ( getline (bbFile,line) )
@@ -381,6 +395,18 @@ std::string bbfileReader (std::string filename, int fd, std::string messageNumbe
         }
     }
     
+    if (D) {
+       // ******************** TEST CODE ********************
+       // bring the read process to a crawl to figure out whether we
+       // implement the concurrent access correctly.
+       std::string logMessage = "debug read delay 3 seconds begins\n";
+       logger(&logMessage[0]);
+       sleep(3);
+       std::string logMessage2 = "debug read delay 3 seconds ends\n";
+       logger(&logMessage2[0]);
+       // ******************** TEST CODE DONE ***************
+    } /* DEBUG_DELAY */
+
     // we are done with the file, we first signal the condition
     // variable and then we return.
     pthread_mutex_lock(&flocks[fd] -> mutex);
@@ -392,6 +418,11 @@ std::string bbfileReader (std::string filename, int fd, std::string messageNumbe
         pthread_cond_broadcast(&flocks[fd] -> can_write);
     pthread_mutex_unlock(&flocks[fd] -> mutex);
     
+    if (D) { // debug stand out put for testing access control
+        std::string logMessage = "ending to read message \n";
+        logger(&logMessage[0]);
+    }
+    
     return returnString;
 }
 
@@ -402,12 +433,6 @@ std::string bbfileWritter (std::string filename, int fd, std::string poster, std
     // notice don't return before hit the lines of code with mutex
     std::string returnString = "";
     
-    std::fstream bbFile;
-    bbFile.open(filename.c_str(),std::ios::in | std::ofstream::app);
-    if (bbFile.fail()) {
-        return "ERROR WRITE can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
-    }
-    
     // The fact that only one thread writes at any given time is ensured
     // by the fact that the successful thread does not release the mutex
     // until the writing process is done.
@@ -419,6 +444,23 @@ std::string bbfileWritter (std::string filename, int fd, std::string poster, std
         pthread_cond_wait(&flocks[fd] -> can_write, &flocks[fd] -> mutex);
     }
     // now we have the mutex _and_ the condition, so we write
+    
+    std::fstream bbFile;
+    bbFile.open(filename.c_str(),std::ios::in | std::ofstream::app);
+    if (bbFile.fail()) {
+        // done writing.
+        // this might have released the file for access, so we broadcast the
+        // condition to unlock whatever process happens to wait for us.
+        pthread_cond_broadcast(&flocks[fd] -> can_write);
+        // we are done!
+        pthread_mutex_unlock(&flocks[fd] -> mutex);
+        return "ERROR WRITE can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
+    }
+    
+    if (D) { // debug stand out put for testing access control
+        std::string logMessage = "beginning to write message \n";
+        logger(&logMessage[0]);
+    }
     
     std::time_t secondsSince1970 = std::time(0);
     std::stringstream ss;
@@ -427,27 +469,37 @@ std::string bbfileWritter (std::string filename, int fd, std::string poster, std
     
     bbFile << uniqueMessageNumber << "/" << poster << "/" << message << std::endl;
     returnString = "WROTE " + uniqueMessageNumber;
+    
+    if (D) { /* DEBUG_DELAY */
+        // ******************** TEST CODE ********************
+        // bring the write process to a crawl to figure out whether we
+        // implement the concurrent access correctly.
+        std::string logMessage = "debug write delay 6 seconds begins \n";
+        logger(&logMessage[0]);
+        sleep(6);
+        std::string logMessage2 = "debug write delay 6 seconds ends \n";
+        logger(&logMessage2[0]);
+        // ******************** TEST CODE DONE ***************
+    }
+    
     // done writing.
     // this might have released the file for access, so we broadcast the
     // condition to unlock whatever process happens to wait for us.
     pthread_cond_broadcast(&flocks[fd] -> can_write);
     // we are done!
     pthread_mutex_unlock(&flocks[fd] -> mutex);
+    
+    if (D) { // debug stand out put for testing access control
+       std::string logMessage = "end to write message \n";
+       logger(&logMessage[0]);
+    }
+       
     return returnString;
 }
 
 std::string bbfileReplacer (std::string filename, int fd, std::string messageNumber, std::string newMessage, std::string newPoster) {
     if (flocks[fd] == 0)
     return "ERROR WRITE can't find designated file (bbfile)";
-
-    // notice don't return before hit the lines of code with mutex
-    std::string returnString = "";
-    
-    std::fstream bbFile;
-    bbFile.open(filename.c_str(),std::ios::in | std::ofstream::app);
-    if (bbFile.fail()) {
-        return "ERROR WRITE can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
-    }
     
     // The fact that only one thread writes at any given time is ensured
     // by the fact that the successful thread does not release the mutex
@@ -461,6 +513,25 @@ std::string bbfileReplacer (std::string filename, int fd, std::string messageNum
     }
     // now we have the mutex _and_ the condition, so we write
     
+    // notice don't return before hit the lines of code with mutex
+    std::string returnString = "";
+    
+    if (D) { // debug stand out put for testing access control
+        std::string logMessage = "beginning to replace message \n";
+        logger(&logMessage[0]);
+    }
+    
+    std::fstream bbFile;
+    bbFile.open(filename.c_str(),std::ios::in | std::ofstream::app);
+    if (bbFile.fail()) {
+        // done writing.
+        // this might have released the file for access, so we broadcast the
+        // condition to unlock whatever process happens to wait for us.
+        pthread_cond_broadcast(&flocks[fd] -> can_write);
+        // we are done!
+        pthread_mutex_unlock(&flocks[fd] -> mutex);
+        return "ERROR WRITE can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
+    }
     
     std::string bbfileContainer = "";
     
@@ -494,17 +565,32 @@ std::string bbfileReplacer (std::string filename, int fd, std::string messageNum
     bbFile << bbfileContainer;
     bbFile.close();
     
+    if (D) { /* DEBUG_DELAY */
+        // ******************** TEST CODE ********************
+        // bring the write process to a crawl to figure out whether we
+        // implement the concurrent access correctly.
+        std::string logMessage = "debug replace delay 6 seconds begins \n";
+        logger(&logMessage[0]);
+        sleep(6);
+        std::string logMessage2 = "debug replace delay 6 seconds ends \n";
+        logger(&logMessage2[0]);
+        // ******************** TEST CODE DONE ***************
+    }
+    
     // done writing.
     // this might have released the file for access, so we broadcast the
     // condition to unlock whatever process happens to wait for us.
     pthread_cond_broadcast(&flocks[fd] -> can_write);
     // we are done!
     pthread_mutex_unlock(&flocks[fd] -> mutex);
+    
+    if (D) { // debug stand out put for testing access control
+       std::string logMessage = "end to replace message \n";
+       logger(&logMessage[0]);
+    }
+       
     return returnString;
-
 }
-
-
 
 TcpUtils* TcpUtils::singleton = NUll_POINTER;
 TcpUtils* TcpUtils::newAInstance() {

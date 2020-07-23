@@ -32,6 +32,17 @@ char const* PIDFile = "bbserv.pid"; // the lock file, to lock the critical regio
 static int PIDFileDescriptor = -1;
 
 char const* bbservLogFile = "bbserv.log"; // redirct all the output to this file when under daemon mode
+pthread_mutex_t logger_mutex;
+void logger(const char * msg) {
+    pthread_mutex_lock(&logger_mutex);
+    time_t tt = time(0);
+    char* ts = ctime(&tt);
+    ts[strlen(ts) - 1] = '\0';
+    printf("%s: %s", ts, msg);
+    fflush(stdout);
+    pthread_mutex_unlock(&logger_mutex);
+}
+
 
 
 // 1.4 Concurrency Management
@@ -189,6 +200,7 @@ int main(int argc, char** argv) {
     
     // initializing
     
+    pthread_mutex_init(&logger_mutex, 0);
     
     int port = 9000;   // port to listen to
     try { port = std::stoi(bp); } // The clients connect to our server on port bp.
@@ -506,7 +518,7 @@ void* do_client (int sd) {
                     }
                     else { // first time open bbfile, and do the operation
                         opened_fds[fd] = true;
-                        ans = bbfileWritter(bbfile, fd, user.username, message);   // read file
+                        ans = bbfileWritter(bbfile, fd, user.username, message);   // write file
                     }
                 }
                 
@@ -809,11 +821,12 @@ void* monitor (void* ignored) {
     while (1) {
         sleep(wakeup_interval);
         pthread_mutex_lock(&mon.mutex);
-        time_t now = time(0);
+        // time_t now = time(0);
         if (mon.con_count == 0)
             connections = 1;
         else
             connections = mon.con_count;
+        /*
         printf("MON: %s\n", ctime(&now));
         printf("MON: currently serving %d clients\n", mon.con_cur);
         printf("MON: average connection time is %d seconds.\n",
@@ -821,6 +834,8 @@ void* monitor (void* ignored) {
         printf("MON: transferred %d bytes per connection on average.\n",
                (int)((float)mon.bytecount/(float)connections));
         printf("MON: (end of information)\n");
+         */
+        
         pthread_mutex_unlock(&mon.mutex);
     }
     return 0;

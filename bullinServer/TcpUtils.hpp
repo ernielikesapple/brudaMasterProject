@@ -205,7 +205,9 @@ const int err_listen  = -6;
     int next_arg(const char*, char);
     const size_t MAX_LEN = 1024;
 
-    
+    extern bool D;
+    void logger(const char *);
+    extern pthread_mutex_t logger_mutex;
 
     // 1.1 Application Protocol
     // bbfile related access control  // TODO: rename all these methods to bbfile...
