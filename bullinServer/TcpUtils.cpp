@@ -265,144 +265,33 @@ int next_arg(const char* line, char delim) {
 }
 
 
-/*
- * Handles the FOPEN command.
- *
- * Allocates the access control structure, initializes the mutex and
- * condition for the file given as argument, and opens the file for
- * both reading and writing.  Returns the file descriptor or a
- * negative number in case of failure.
- */
-int file_init (const char* filename) {  // TODO: rename this function to bbfile related name
-    // char msg[MAX_LEN];  // logger string
-    //snprintf(msg, MAX_LEN, "%s: attempting to open %s\n", __FILE__, filename);
-    //logger(msg);
-    std::cout<< "=======第一次进入file_init ===1=="   << std::endl;
-    // at this file should be guaranteed not to be opened already
-    int fd = open(filename, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    if ( fd == -1 ) {
-     //   snprintf(msg, MAX_LEN, "%s: open error: %s\n", __FILE__, strerror(errno));
-       // logger(msg);
-        return -1;
-    }
-
-    // now that we have a file we allocate and initialize the access
-    // control structure:
-    rwexcl_t* lck = new rwexcl_t;
-    pthread_mutex_init(&lck -> mutex, 0);
-    std::cout<< "=======第一次进入file_init ===1==" <<"(&lck -> mutex" <<  &lck -> mutex << std::endl;
-    pthread_cond_init(&lck -> can_write,0);
-    std::cout<< "=======第一次进入file_init ===1=="   << std::endl;
-    lck -> reads = 0;
-    lck -> fd = fd;
-    lck -> owners = 1;
-    lck -> name = new char[strlen(filename) + 1];
-    strcpy(lck -> name, filename);
-
-    flocks[fd] = lck;
-    
-    
-    // snprintf(msg, MAX_LEN, "%s: %s opened on descriptor %d\n", __FILE__, filename, fd);
-   // logger(msg);
-    return fd;
-}
-
-
-// bbfile access control related methods:
-
-/*
- * Handles the FCLOSE command.
- *
- * Physically closes the file iff the file has only one owner.
- */
-int file_exit (int fd) {        // TODO: rename this function to bbfile related name
-    std::cout<< "=======第一次进入file_exit ===1=="   << std::endl;
-
-    if (flocks[fd] == 0)
-        return err_nofile;
-    
-    // close is a major event, we treat it as a write.
-    // so we wait for everybody to finish working with the file
-    std::cout<< "=======第一次进入file_exit ===2=="   << std::endl;
-    pthread_mutex_lock(&flocks[fd] -> mutex);
-    while (flocks[fd] -> reads != 0) {
-        // release the mutex while waiting..
-        std::cout<< "=======第一次进入file_exit ===3==等待等待等待="   << std::endl;
-        pthread_cond_wait(&flocks[fd] -> can_write, &flocks[fd] -> mutex);
-        std::cout<< "=======第一次进入file_exit ===3==等待结束="   << std::endl;
-
-    }
-    // now we have the mutex _and_ the condition, so we process the
-    // close event
-    std::cout<< "=======第一次进入file_exit ===4=======flocks[fd] -> owners="   << flocks[fd] -> owners  << std::endl;
-    flocks[fd] -> owners --;
-    if ( flocks[fd] -> owners != 0) {
-        std::cout<< "=======第一次进入file_exit ===5==" <<  "flocks[fd] -> owners=" <<flocks[fd] -> owners << std::endl;
-        // this might have released the file for access, so we
-        // broadcast the condition to unlock whatever process happens
-        // to wait for us.
-        pthread_cond_broadcast(&flocks[fd] -> can_write);
-        pthread_mutex_unlock(&flocks[fd] -> mutex);
-        
-    
-        
-        return 0;
-    }
-    // no other client is accessing this file, we destroy the
-    // descriptor
-std::cout<< "=======第一次进入file_exit ===6=="   << std::endl;
-    int closed = close(flocks[fd] -> fd);
-    delete[] flocks[fd] -> name;
-    delete flocks[fd];
-    flocks[fd] = 0;
-    
-std::cout<< "=======第一次进入file_exit ===7=="   << std::endl;
-    // Note: mutex destroyed, no need to unlock
-    return closed;
-}
-
-std::string bbfileReader (std::string filename, int fd, std::string messageNumber) { 
+std::string bbfileReader (std::string filename, std::string messageNumber) {
     std::string returnString = "";
-    std::cout<< "=======第一次进入bbfileReader===1=="   << std::endl;
-
-    if (flocks[fd] == 0) {
-        return "ERROR READ can't find designated file (bbfile)";
-    }
-    
-    std::cout<< "=======第一次进入bbfileReader==2========&flocks[fd] -> mutex="  << &flocks[fd] -> mutex << std::endl;
-    pthread_mutex_lock(&flocks[fd] -> mutex);
-    std::cout<< "=======第一次进入bbfileReader===3=="   << std::endl;
+    pthread_mutex_lock(&flocks.mutex);
     // We increment the number of concurrent reads, so that a write
     // request knows to wait after us.
-    flocks[fd] -> reads ++;
-    std::cout<< "=======第一次进入bbfileReader===4===flocks[fd] -> reads===="  << flocks[fd] -> reads << std::endl;
-
-    pthread_mutex_unlock(&flocks[fd] -> mutex);
-    std::cout<< "=======第一次进入bbfileReader===4-1===flocks[fd] -> reads===="  << flocks[fd] -> reads << std::endl;
+    flocks.reads ++;
+    pthread_mutex_unlock(&flocks.mutex);
 
     std::fstream bbFile;
     bbFile.open(filename.c_str(),std::ios::in);
     if (bbFile.fail()) {
-        std::cout<< "=======第一次进入bbfileReader===5======"   << std::endl;
         // we are done with the file, we first signal the condition
         // variable and then we return.
-        pthread_mutex_lock(&flocks[fd] -> mutex);
-        flocks[fd] -> reads --;
+        pthread_mutex_lock(&flocks.mutex);
+        flocks.reads --;
         // this might have released the file for write access, so we
         // broadcast the condition to unlock whatever writing process
         // happens to wait after us.
-        if (flocks[fd] -> reads == 0)
-            pthread_cond_broadcast(&flocks[fd] -> can_write);
-        pthread_mutex_unlock(&flocks[fd] -> mutex);
-        std::cout<< "=======第一次进入bbfileReader==6======"   << std::endl;
+        if (flocks.reads == 0)
+            pthread_cond_broadcast(&flocks.can_write);
+        pthread_mutex_unlock(&flocks.mutex);
         return "ERROR READ can't find designated file (bbfile)";
     }
-    std::cout<< "=======第一次进入bbfileReader===7======"   << std::endl;
     if (D) { // debug stand out put for testing access control
        std::string logMessage = "beginning to read message \n";
        logger(&logMessage[0]);
     }
-    std::cout<< "=======第一次进入bbfileReader===8======"   << std::endl;
     std::string line;
     while ( getline (bbFile,line) )
     {   size_t found = line.find(messageNumber);
@@ -416,7 +305,6 @@ std::string bbfileReader (std::string filename, int fd, std::string messageNumbe
         }
     }
     
-    std::cout<< "=======第一次进入bbfileReader===8.1===returnString===" << returnString  << std::endl;
     if (D) {
        // ******************** TEST CODE ********************
        // bring the read process to a crawl to figure out whether we
@@ -429,16 +317,18 @@ std::string bbfileReader (std::string filename, int fd, std::string messageNumbe
        // ******************** TEST CODE DONE ***************
     } /* DEBUG_DELAY */
 
+    
+    bbFile.close();
     // we are done with the file, we first signal the condition
     // variable and then we return.
-    pthread_mutex_lock(&flocks[fd] -> mutex);
-    flocks[fd] -> reads --;
+    pthread_mutex_lock(&flocks.mutex);
+    flocks.reads --;
     // this might have released the file for write access, so we
     // broadcast the condition to unlock whatever writing process
     // happens to wait after us.
-    if (flocks[fd] -> reads == 0)
-        pthread_cond_broadcast(&flocks[fd] -> can_write);
-    pthread_mutex_unlock(&flocks[fd] -> mutex);
+    if (flocks.reads == 0)
+        pthread_cond_broadcast(&flocks.can_write);
+    pthread_mutex_unlock(&flocks.mutex);
     
     if (D) { // debug stand out put for testing access control
         std::string logMessage = "ending to read message \n";
@@ -448,52 +338,34 @@ std::string bbfileReader (std::string filename, int fd, std::string messageNumbe
     return returnString;
 }
 
-std::string bbfileWritter (std::string filename, int fd, std::string poster, std::string message) {
-    std::cout<< "=======第一次进入bbfileWritter===1=="   << std::endl;
-
-    if (flocks[fd] == 0) {
-        return "ERROR WRITE can't find designated file (bbfile)";
-    }
-    
+std::string bbfileWritter (std::string filename, std::string poster, std::string message) {
     // notice don't return before hit the lines of code with mutex
     std::string returnString = "";
     
     // The fact that only one thread writes at any given time is ensured
     // by the fact that the successful thread does not release the mutex
     // until the writing process is done.
-    std::cout<< "=======第一次进入bbfileWritter==2==="   << std::endl;
-    pthread_mutex_lock(&flocks[fd] -> mutex);
+    pthread_mutex_lock(&flocks.mutex);
     // we wait for condition as long as somebody is doing things with
     // the file
-    std::cout<< "=======第一次进入bbfileWritter==3==="   << std::endl;
 
-    while (flocks[fd] -> reads != 0) {
+    while (flocks.reads != 0) {
         // release the mutex while waiting...
-        std::cout<< "=======第一次进入bbfileWritter==4==等待等待等待等待等待等待等待="   << std::endl;
-
-        pthread_cond_wait(&flocks[fd] -> can_write, &flocks[fd] -> mutex);
-        std::cout<< "=======第一次进入bbfileWritter==4==等待结束="   << std::endl;
-
+        pthread_cond_wait(&flocks.can_write, &flocks.mutex);
     }
     // now we have the mutex _and_ the condition, so we write
-    std::cout<< "=======第一次进入bbfileWritter==5==="   << std::endl;
-
     std::fstream bbFile;
     bbFile.open(filename.c_str(),std::ios::in | std::ofstream::app);
     if (bbFile.fail()) {
-        std::cout<< "=======第一次进入bbfileWritter==6==="   << std::endl;
-
         // done writing.
         // this might have released the file for access, so we broadcast the
         // condition to unlock whatever process happens to wait for us.
-        pthread_cond_broadcast(&flocks[fd] -> can_write);
+        pthread_cond_broadcast(&flocks.can_write);
         // we are done!
-        pthread_mutex_unlock(&flocks[fd] -> mutex);
+        pthread_mutex_unlock(&flocks.mutex);
         return "ERROR WRITE can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
     }
     
-    std::cout<< "=======第一次进入bbfileWritter==7==="   << std::endl;
-
     if (D) { // debug stand out put for testing access control
         std::string logMessage = "beginning to write message \n";
         logger(&logMessage[0]);
@@ -503,12 +375,8 @@ std::string bbfileWritter (std::string filename, int fd, std::string poster, std
     std::stringstream ss;
     ss << secondsSince1970;
     std::string uniqueMessageNumber = ss.str();
-    
-    bbFile << uniqueMessageNumber << "/" << poster << "/" << message << std::endl;
     returnString = "WROTE " + uniqueMessageNumber;
     
-    std::cout<< "=======第一次进入bbfileWritter==8==="   << std::endl;
-
     if (D) { /* DEBUG_DELAY */
         // ******************** TEST CODE ********************
         // bring the write process to a crawl to figure out whether we
@@ -521,19 +389,15 @@ std::string bbfileWritter (std::string filename, int fd, std::string poster, std
         // ******************** TEST CODE DONE ***************
     }
     
+    bbFile.close();
     // done writing.
     // this might have released the file for access, so we broadcast the
     // condition to unlock whatever process happens to wait for us.
-    std::cout<< "=======第一次进入bbfileWritter==9==="   << std::endl;
 
-    pthread_cond_broadcast(&flocks[fd] -> can_write);
+    pthread_cond_broadcast(&flocks.can_write);
     // we are done!
-    std::cout<< "=======第一次进入bbfileWritter==10==="   << std::endl;
+    pthread_mutex_unlock(&flocks.mutex);
 
-    pthread_mutex_unlock(&flocks[fd] -> mutex);
-    std::cout<< "=======第一次进入bbfileWritter=11==="   << std::endl;
-
-    
     if (D) { // debug stand out put for testing access control
        std::string logMessage = "end to write message \n";
        logger(&logMessage[0]);
@@ -542,19 +406,17 @@ std::string bbfileWritter (std::string filename, int fd, std::string poster, std
     return returnString;
 }
 
-std::string bbfileReplacer (std::string filename, int fd, std::string messageNumber, std::string newMessage, std::string newPoster) {
-    if (flocks[fd] == 0)
-    return "ERROR WRITE can't find designated file (bbfile)";
-    
+std::string bbfileReplacer (std::string filename, std::string messageNumber, std::string newMessage, std::string newPoster) {
+   
     // The fact that only one thread writes at any given time is ensured
     // by the fact that the successful thread does not release the mutex
     // until the writing process is done.
-    pthread_mutex_lock(&flocks[fd] -> mutex);
+    pthread_mutex_lock(&flocks.mutex);
     // we wait for condition as long as somebody is doing things with
     // the file
-    while (flocks[fd] -> reads != 0) {
+    while (flocks.reads != 0) {
         // release the mutex while waiting...
-        pthread_cond_wait(&flocks[fd] -> can_write, &flocks[fd] -> mutex);
+        pthread_cond_wait(&flocks.can_write, &flocks.mutex);
     }
     // now we have the mutex _and_ the condition, so we write
     
@@ -572,9 +434,9 @@ std::string bbfileReplacer (std::string filename, int fd, std::string messageNum
         // done writing.
         // this might have released the file for access, so we broadcast the
         // condition to unlock whatever process happens to wait for us.
-        pthread_cond_broadcast(&flocks[fd] -> can_write);
+        pthread_cond_broadcast(&flocks.can_write);
         // we are done!
-        pthread_mutex_unlock(&flocks[fd] -> mutex);
+        pthread_mutex_unlock(&flocks.mutex);
         return "ERROR WRITE can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
     }
     
@@ -625,9 +487,9 @@ std::string bbfileReplacer (std::string filename, int fd, std::string messageNum
     // done writing.
     // this might have released the file for access, so we broadcast the
     // condition to unlock whatever process happens to wait for us.
-    pthread_cond_broadcast(&flocks[fd] -> can_write);
+    pthread_cond_broadcast(&flocks.can_write);
     // we are done!
-    pthread_mutex_unlock(&flocks[fd] -> mutex);
+    pthread_mutex_unlock(&flocks.mutex);
     
     if (D) { // debug stand out put for testing access control
        std::string logMessage = "end to replace message \n";

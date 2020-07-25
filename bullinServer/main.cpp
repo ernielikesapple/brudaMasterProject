@@ -104,10 +104,7 @@ void* do_client (int sd);
  * The access control structure for the opened files (initialized in
  * the main function), and its size.
  */
-rwexcl_t** flocks;
-size_t flocks_size;
 
-std::vector<bool> opened_fds;
 
 int main(int argc, char** argv) {
     
@@ -235,6 +232,10 @@ int main(int argc, char** argv) {
     pthread_create(&tt, &ta, monitor, NULL);
     
     
+    flocks.mutex = PTHREAD_MUTEX_INITIALIZER;
+    flocks.can_write = PTHREAD_COND_INITIALIZER;
+    flocks.reads = 0;
+    
     //  use preallocated threads. The number of threads to be preallocated is Tmax, so that Tmax is also a limit on concurrency.
     int preallocatThreadsNumber = 20;
     try { preallocatThreadsNumber = std::stoi(Tmax); } // The clients connect to our server on port bp.
@@ -257,15 +258,6 @@ int main(int argc, char** argv) {
 
 
 int startServer(int msock) {
-    
-    // Initialize the file locking structure:
-    flocks_size = getdtablesize();
-    flocks = new rwexcl_t* [flocks_size];       // TODO: remember to delete this pointer when get signal like hup or sig quit
-    for (size_t i = 0; i < flocks_size; i++) {
-        flocks[i] = 0;                     // Make all the element inside flocks[] a NULL pointer
-    }
-    
-    
     int ssock;
     struct sockaddr_in client_addr; // the address of the client...
     unsigned int client_addr_len = sizeof(client_addr); // ... and its length
@@ -363,16 +355,6 @@ void* do_client (int sd) {
     // const char* ack = "ACK: ";
     int n;
     std::cout<< "here1" << std::endl;
-     std::cout<< "do_client== for (size_t i = 0; i < flocks_size; i++)==" << opened_fds.size()<< std::endl;
-    // opened_fds.resize(flocks_size);
-    if (opened_fds.size() == 0) {
-        for (std::size_t i = 0; i < flocks_size; i++) {
-            opened_fds.push_back(false);
-        }
-    }
-    
-    
-    std::cout<< "here2" << std::endl;
     
 //    for (std::list<bool>::iterator i = opened_fds.begin();i != opened_fds.end();i++) {
 //        *i = false;
@@ -418,12 +400,6 @@ void* do_client (int sd) {
             shutdown(sd,1);
             close(sd);
             
-            for (size_t i = 0; i < flocks_size; i++) {
-                if (opened_fds[i]) {
-                    file_exit((int)i);
-                }
-            }
-            opened_fds.clear();
 
             printf("Outgoing client...\n");
             // monitor code begins
@@ -480,78 +456,12 @@ void* do_client (int sd) {
         
         else if (strncasecmp(req,"READ",strlen("READ")) == 0 ) {
             int nextArgIndex = next_arg(req,' ');
-            std::cout<< "=======strncasecmp(req,)) == 0======opened_fds.size()=="  << opened_fds.size() << std::endl;
-
             if (nextArgIndex == -1) {
                 ans = "READ command requires a message number, Format: 'READ message-number'";
             }
             else {
                 std::string messageNumber(&req[nextArgIndex]);
-                std::cout<< "=======strncasecmp(req,)) == 1======opened_fds.size()=="  << opened_fds.size() << std::endl;
-
-                //  open file,
-                int fd = -1;
-                std::cout<< "=======strncasecmp(req,)) == 2======opened_fds.size()=="  << opened_fds.size() << std::endl;
-
-                for (size_t i = 0; i < flocks_size; i++) {  // check if the bbfile is already opened?
-                    std::cout<< "=======strncasecmp(req,)) == 3======opened_fds.size()=="  << opened_fds.size() << std::endl;
-
-                    if (flocks[i] != 0 && strcmp(&bbfile[0], flocks[i] -> name) == 0) {     // bbfile already open
-
-                        fd = (int)i;
-                        std::cout<< "=======strncasecmp(req,)) == 4==这里很关键==flocks[i]=="<< flocks[i] << "====&flocks[i]=" << &flocks[i]<< "===i====" << i  << "==fd==" << fd << "&flocks[fd] -> mutex" << &flocks[fd] -> mutex<< std::endl;
-
-                        pthread_mutex_lock(&flocks[fd] -> mutex);
-                        std::cout<< "=======strncasecmp(req,)) == 4.1==这里很关键==flocks[i]=="<< flocks[i] << "===i==" << i << std::endl;
-                        
-                         std::cout<< "=======strncasecmp(req,)) == 4.2==这里很关键==opened_fds[fd]=="<< opened_fds[fd] << "===i==" << i << std::endl;
-
-                        if (! opened_fds[fd]) { // file already opened by the same client?
-                            
-                            flocks[fd] -> owners ++;
-                            std::cout<< "=======strncasecmp(req,)) == 4.3==这里很关键==flocks[fd] -> owners=="<< flocks[fd] -> owners << std::endl;
-
-                        }
-                        std::cout<< "=======strncasecmp(req,)) == 4.4==这里很关键==flocks[fd] -> owners=="<< flocks[fd] -> owners << std::endl;
-                        pthread_mutex_unlock(&flocks[fd] -> mutex);
-                        std::cout<< "=======strncasecmp(req,)) == 4.5==这里很关键==opened_fds[fd]-> owners=="<< opened_fds[fd] << std::endl;
-                        opened_fds[fd] = true;
-                        break;
-                    }
-                }
-                if (fd >= 0) { // bbfile already opened
-                    std::cout<< "=======strncasecmp(req,)) == 5======opened_fds.size()=="  << opened_fds.size() << std::endl;
-
-                    ans = bbfileReader(bbfile, fd, messageNumber);  // read file
-                    std::cout<< "=======strncasecmp(req,)) == 5.1======opened_fds.size()=== ans=="  <<  ans << std::endl;
-
-                }
-                else { // we open the file anew
-                    std::cout<< "=======strncasecmp(req,)) == 6======opened_fds.size()=="  << opened_fds.size() << std::endl;
-
-                    fd = file_init(&bbfile[0]);
-                    if (fd < 0) {
-                        ans = "ERROR READ, can't open the designated open file (bbfile)";
-                    }
-                    else { // first time open bbfile, and do the operation
-                        
-                        std::cout<< "=======第一次进入读取======opened_fds.size()=="  << opened_fds.size() << std::endl;
-                        opened_fds[fd] = true;
-                        ans = bbfileReader(bbfile, fd, messageNumber);  // read file
-                    }
-                }
-                
-                //  close file,
-                int result = file_exit(fd);
-                opened_fds[fd] = false;
-                if (result == err_nofile)
-                    ans = "ERROR READ, can't find the designated open file (bbfile)";
-                else if (result < 0) {
-                    ans = "ERROR READ, can't find the designated open file (bbfile)";
-                }
-                else {
-                    // TODO: Print log bbfile is properly closed
-                }
+                ans = bbfileReader(bbfile, messageNumber);
             }
         }
         
@@ -562,50 +472,7 @@ void* do_client (int sd) {
             }
             else {
                 std::string message(&req[nextArgIndex]);
-                
-                //  open file,
-                int fd = -1;
-                for (size_t i = 0; i < flocks_size; i++) {  // check if the bbfile is already opened?
-                    if (flocks[i] != 0 && strcmp(&bbfile[0], flocks[i] -> name) == 0) {     // bbfile already open
-                        fd = (int)i;
-                        pthread_mutex_lock(&flocks[fd] -> mutex);
-                        if (! opened_fds[fd])  // file already opened by the same client?
-                            flocks[fd] -> owners ++;
-                        pthread_mutex_unlock(&flocks[fd] -> mutex);
-                        opened_fds[fd] = true;
-                        break;
-                    }
-                }
-                if (fd >= 0) { // bbfile already opened
-                    ans = bbfileWritter(bbfile, fd, user.username, message);  // write file
-                }
-                else { // we open the file anew
-                    fd = file_init(&bbfile[0]);
-                    if (fd < 0) {
-                        ans = "ERROR WRITE, can't open the designated open file (bbfile)";
-                    }
-                    else { // first time open bbfile, and do the operation
-                        std::cout<< "=======第一次进入写入=====opened_fds.size()=="  << opened_fds.size() << "==fd=="<< fd << std::endl;
-
-                        opened_fds[fd] = true;
-                        std::cout<< "=======第一次进入写入===iterator 结束===opened_fds.size()=="  << opened_fds.size() << std::endl;
-
-                        ans = bbfileWritter(bbfile, fd, user.username, message);   // write file
-                    }
-                }
-                
-                //  close file,
-                int result = file_exit(fd);
-                opened_fds[fd] = false;
-            
-                if (result == err_nofile)
-                    ans = "ERROR WRITE, can't find the designated open file (bbfile)";
-                else if (result < 0) {
-                    ans = "ERROR WRITE, can't find the designated open file (bbfile)";
-                }
-                else {
-                    // TODO: Print log bbfile is properly closed
-                }
+                ans = bbfileWritter(bbfile, user.username, message);
             }
         }
         
@@ -622,45 +489,7 @@ void* do_client (int sd) {
                     std::string messageNumber = messageNumberPlusMessage.substr(0, foundSlash);
                     std::string newMessage = messageNumberPlusMessage.substr(foundSlash + 1, messageNumberPlusMessage.length()); // + 1 to skip the orignal '/'
                     if (messageNumber.length()>0 && newMessage.length()>0) {
-                        //  open file,
-                        int fd = -1;
-                        for (size_t i = 0; i < flocks_size; i++) {  // check if the bbfile is already opened?
-                            if (flocks[i] != 0 && strcmp(&bbfile[0], flocks[i] -> name) == 0) {     // bbfile already open
-                                fd = (int)i;
-                                pthread_mutex_lock(&flocks[fd] -> mutex);
-                                if (! opened_fds[fd])  // file already opened by the same client?
-                                    flocks[fd] -> owners ++;
-                                pthread_mutex_unlock(&flocks[fd] -> mutex);
-                                opened_fds[fd] = true;
-                                break;
-                            }
-                        }
-                        if (fd >= 0) { // bbfile already opened
-                            ans = bbfileReplacer(bbfile, fd, messageNumber, newMessage, user.username);  // replace file
-                        }
-                        else { // we open the file anew
-                            fd = file_init(&bbfile[0]);
-                            if (fd < 0) {
-                                ans = "ERROR WRITE, can't open the designated open file (bbfile)";
-                            }
-                            else { // first time open bbfile, and do the operation
-                                opened_fds[fd] = true;
-                                ans = bbfileReplacer(bbfile, fd, messageNumber, newMessage, user.username);  // replace file
-                            }
-                        }
-                        
-                        //  close file,
-                        int result = file_exit(fd);
-                        opened_fds[fd] = false;
-                        if (result == err_nofile)
-                            ans = "ERROR WRITE, can't find the designated open file (bbfile)";
-                        else if (result < 0) {
-                            ans = "ERROR WRITE, can't find the designated open file (bbfile)";
-                        }
-                        else {
-                            // TODO: Print log bbfile is properly closed
-                        }
-                        
+                        ans = bbfileReplacer(bbfile, messageNumber, newMessage, user.username);  // replace file
                     } else {
                         ans = "REPLACE command requires a proper format to continue, Format: 'REPLACE message-number/message'";
                     }
@@ -695,12 +524,6 @@ void* do_client (int sd) {
         if(stopCondition){                         //  🌟 改动 ?????????do we need to add this???
             std::cout<< "=======从来不会进入的======" << std::endl;
             close(sd);
-            
-            for (size_t i = 0; i < flocks_size; i++) {
-                if (opened_fds[i])
-                    file_exit((int)i);
-            }
-            opened_fds.clear();
             // delete[] opened_fds;
            // exit(0);???????
             pthread_mutex_lock(&currentRunningSlaveSocket_mutex);
@@ -730,10 +553,6 @@ void* do_client (int sd) {
     
     
     std::cout<< "=======do client 结束======" << std::endl;
-    for (size_t i = 0; i < flocks_size; i++) {
-        if (opened_fds[i])
-            file_exit((int)i);
-    }
     pthread_mutex_lock(&currentRunningSlaveSocket_mutex);
     currentRunningSlaveSocket.remove(sd);
     pthread_mutex_unlock(&currentRunningSlaveSocket_mutex);
@@ -748,11 +567,6 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
     
     // TODO: REDO part 1.4 for the current management part, especially for destorying the thread pool
     
-    for (size_t i = 0; i < flocks_size; i++) {
-         if (opened_fds[i])
-             file_exit((int)i);
-     }
-    opened_fds.clear();
     
     std::cout << " size of currentRunningSlaveSocket======" << currentRunningSlaveSocket.size() << std::endl;
     

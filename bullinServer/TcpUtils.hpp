@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <map>
+#include <pthread.h>
 /*** Error codes: ***/
 
 /* See below for what they mean. */
@@ -172,24 +173,13 @@ const int err_listen  = -6;
      * variable (basically, one can access the file iff nobody writes to
      * it).
      */
-    struct rwexcl_t {
+    static struct rwexcl_t {
         pthread_mutex_t mutex;      // mutex for the whole structure
         pthread_cond_t can_write;   // condition variable, name says it all
         unsigned int reads;         // number of simultaneous reads (a write
                                     // process should wait until this number is 0)
-        unsigned int owners;        // how many clients have the file opened
-        int fd;                     // the file descriptor (also used as
-                                    // file id for the clients)
-        char* name;                 // the (absolute) name of the file
-    };
-
-    /*
-     * The access control structure for the opened files (initialized in
-     * the main function), and its size.
-     */
-    extern rwexcl_t** flocks;  // TODO: rename this to bbfileLock
-    extern size_t flocks_size;
-
+    } flocks;
+    
     /*
      * nextarg(line, delim) looks for the first occurrence of `delim' in
      * `line' and returns the index of the character just after this
@@ -210,14 +200,13 @@ const int err_listen  = -6;
     extern pthread_mutex_t logger_mutex;
 
     // 1.1 Application Protocol
-    // bbfile related access control  // TODO: rename all these methods to bbfile...
-    int file_init (const char* filename);
-    int file_exit (int fd);
+    // bbfile related access control
+  
     
     // 1.1 Application Protocol
-    std::string bbfileReader (std::string filename, int fd, std::string messageNumber);
-    std::string bbfileWritter (std::string filename, int fd, std::string poster, std::string message);
-    std::string bbfileReplacer (std::string filename, int fd, std::string messageNumber, std::string newMessage, std::string newPoster);
+    std::string bbfileReader (std::string filename, std::string messageNumber);
+    std::string bbfileWritter (std::string filename, std::string poster, std::string message);
+    std::string bbfileReplacer (std::string filename, std::string messageNumber, std::string newMessage, std::string newPoster);
 
 
     /*
