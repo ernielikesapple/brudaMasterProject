@@ -294,8 +294,11 @@ std::string bbfileReader (std::string filename, std::string messageNumber) {
     }
     std::string line;
     while ( getline (bbFile,line) )
-    {   size_t found = line.find(messageNumber);
-        if (found != std::string::npos) {
+    {   //size_t found = line.find(messageNumber);
+		std::string messageNumber_printed = line.substr(0, line.find("/"));
+		size_t found = messageNumber_printed.find(messageNumber);
+        //if (found != std::string::npos) {
+		if (found != std::string::npos && messageNumber == messageNumber_printed) {	
             size_t foundSlash= line.find_first_of('/');
             std::string posterNmessage = line.substr(foundSlash, line.length());
             returnString = "MESSAGE " + messageNumber + " " + posterNmessage; // notice don't return before hit the lines of code with mutex
