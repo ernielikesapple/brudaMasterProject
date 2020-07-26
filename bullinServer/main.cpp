@@ -15,7 +15,7 @@
 #include <signal.h>
 #include <queue>
 #include <list>
-
+#include <atomic>
 #include "TcpUtils.hpp"
 #include "ConfigFileHandler.hpp"
 
@@ -45,14 +45,19 @@ void logger(const char * msg) {
 }
 
 // 1.4 Concurrency Management
-std::vector<pthread_t> preallocatedThreadsPool;
+struct structThread {
+    pthread_t thread;
+    bool idleState;
+};
+
+std::vector<structThread> preallocatedThreadsPool;
 std::queue<int> tcpQueue;
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t condition_var = PTHREAD_COND_INITIALIZER;
 // pthread_cond_t quit_condition_var = PTHREAD_COND_INITIALIZER; // TODO: deal with Sign hup,
 void* threadFunctionUsedByThreadsPool(void *arg);
-bool stopCondition = false;
+std::atomic<bool> stopCondition(false);
 
 std::list<int> currentRunningSlaveSocket;
 pthread_mutex_t currentRunningSlaveSocket_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -217,11 +222,10 @@ int main(int argc, char** argv) {
     int msock;               // master and slave socket
     msock = passivesocket(port,qlen);
     currentMasterSocket = (int)msock;
-    std::cout << "======================currentMasterSocket============================"<< currentMasterSocket << '\n';
     if (msock < 0) {
      perror("passivesocket");
     }
-    // TODO: START THE SERVER
+
     printf("Server up and listening on port %d.\n", port);
     // Setting up the thread creation: for monitor thread
     pthread_t tt;
@@ -243,8 +247,8 @@ int main(int argc, char** argv) {
     catch (std::out_of_range const &e) { std::cout << "Integer overflow: std::out_of_range thrown" << '\n'; }
        
     preallocatedThreadsPool.resize(preallocatThreadsNumber); // create a threadpoOl
-    for(pthread_t &i : preallocatedThreadsPool) {
-        pthread_create(&i, NULL, threadFunctionUsedByThreadsPool, NULL);
+    for(structThread &i : preallocatedThreadsPool) {
+        pthread_create(&i.thread, NULL, threadFunctionUsedByThreadsPool, NULL);
     }
     
     startServer(msock);
@@ -263,17 +267,28 @@ int startServer(int msock) {
     unsigned int client_addr_len = sizeof(client_addr); // ... and its length
     
     
-    while (1) {
+    while (!stopCondition) {
         // Accept connection:
-        std::cout << "============startServer 1" <<  std::endl;
-        std::cout << "==========accept==等待等待=" <<  std::endl;
-        ssock = ::accept((int)msock, (struct sockaddr*)&client_addr, &client_addr_len);   //  the return value is a socket
-        std::cout << "==========accept==等待结束=" <<  std::endl;
-
-        std::cout << "============startServer=======current ssock Socket==============2=============="<< ssock << '\n';
-
+        if (!stopCondition) {
+             ssock = ::accept((int)msock, (struct sockaddr*)&client_addr, &client_addr_len);   //  the return value is a socket
+            
+//            struct pollfd pollrec;
+//            pollrec.fd = msock;
+//            pollrec.events = POLLIN;
+//            ssock = poll(&pollrec,client_addr_len,100000000);
+            
+            
+//            const int ALEN = 256;
+//            char requestFromClient[ALEN];
+//            ssock = recv_nonblock(msock, requestFromClient, ALEN-1, 50*60*1000);
+            
+            
+            // TODO:: add logic to deal with time out
+        } else {
+            return 1;
+        }
+    
         if (ssock < 0) {
-             std::cout << "======================卡=============="<< ssock << '\n';
              if (errno == EINTR) continue;
              perror("accept");
              running =0;
@@ -284,7 +299,6 @@ int startServer(int msock) {
             pthread_mutex_lock(&mutex); // one thread mess with the queue at one time
             
             tcpQueue.push(ssock);
-            std::cout << "-----------------startServer---tcpQueue-----" << tcpQueue.front() << "======size=="<< tcpQueue.size()<< std::endl;
             pthread_cond_signal(&condition_var);
             pthread_mutex_unlock(&mutex);
                     
@@ -316,30 +330,42 @@ void* threadFunctionUsedByThreadsPool(void *arg) {
            // wait for a task to be queued
        while (tcpQueue.empty() && !stopCondition) {
            pthread_cond_wait(&condition_var, &mutex); // wait for the signal from other thread to deal with client otherwise sleep
+           std::cout << " ======threadFunctionUsedByThreadsPool==   等待结束=="  << std::endl;
        }
        if (stopCondition == false) {
+        std::cout << " ======threadFunctionUsedByThreadsPool==  1=="  << std::endl;
+
            newClient = tcpQueue.front();
            tcpQueue.pop();
+           std::cout << " ======threadFunctionUsedByThreadsPool==  2=="  << std::endl;
 
            // exit lock while operating on a task
            pthread_mutex_unlock(&mutex);
+           std::cout << " ======threadFunctionUsedByThreadsPool==  3=="  << std::endl;
 
            if (newClient) {
+               std::cout << " ======threadFunctionUsedByThreadsPool==  4=="  << std::endl;
+
                do_client(newClient);
+               std::cout << " ======threadFunctionUsedByThreadsPool==  5=="  << std::endl;
+
            }
+           std::cout << " ======threadFunctionUsedByThreadsPool==  6=="  << std::endl;
 
            // re-acquire the lock
            pthread_mutex_lock(&mutex);
+           std::cout << " ======threadFunctionUsedByThreadsPool==  7=="  << std::endl;
+
        }
-    
+        std::cout << " ======threadFunctionUsedByThreadsPool==  while 最后走一次=="  << std::endl;
+
     }
    // release the lock before exiting the function
+    std::cout << " ======threadFunctionUsedByThreadsPool== threadFunctionUsedByThreadsPool==出口1=="  << std::endl;
    pthread_mutex_unlock(&mutex);
+    std::cout << " ======threadFunctionUsedByThreadsPool== threadFunctionUsedByThreadsPool===出口2=="  << std::endl;
    return NULL;
 }
-
-
-    
 
 
 /*
@@ -350,15 +376,11 @@ void* threadFunctionUsedByThreadsPool(void *arg) {
  * server.
  */
 void* do_client (int sd) {
-    
+    std::cout << " ======do_client==  1=="  << std::endl;
+
     char req[MAX_LEN];   // the content sent by the client
     // const char* ack = "ACK: ";
     int n;
-    std::cout<< "here1" << std::endl;
-    
-//    for (std::list<bool>::iterator i = opened_fds.begin();i != opened_fds.end();i++) {
-//        *i = false;
-//    }
     // make sure req is null-terminated...
     req[MAX_LEN-1] = '\0';
     
@@ -374,8 +396,9 @@ void* do_client (int sd) {
     // monitor code ends
 
     // Loop while the client has something to say...
-    while ((n = readline(sd,req,MAX_LEN-1)) != recv_nodata) {
-        std::cout<< "循环体====n = readlin===" << std::endl;
+    while ((n = readline(sd,req,MAX_LEN-1)) != recv_nodata && !stopCondition) {
+       // std::cout << " ===do_client====readline====="  << std::endl;
+
         std::string usage = "Commands avaiable: \n";
         std::string greetingsUsage = "Greeting \n";
         std::string userUsage = "USER name \n";
@@ -399,7 +422,8 @@ void* do_client (int sd) {
             printf("Received quit, sending EOF.\n");
             shutdown(sd,1);
             close(sd);
-            
+            std::cout << " ======do_client==  用自己线程挂你比就能返回正常值=="<<  close(sd) << "===="<<        shutdown(sd,1) << std::endl;
+
 
             printf("Outgoing client...\n");
             // monitor code begins
@@ -408,7 +432,7 @@ void* do_client (int sd) {
             mon.con_count++;
             mon.con_time += time(0) - start;
             pthread_mutex_unlock(&mon.mutex);
-            // monitor code ends
+            // monitor code endsb
             
             pthread_mutex_lock(&currentRunningSlaveSocket_mutex);
             currentRunningSlaveSocket.remove(sd);
@@ -480,7 +504,6 @@ void* do_client (int sd) {
             int nextArgIndex = next_arg(req,' ');
             if (nextArgIndex == -1) {
                 ans = "REPLACE command requires a message, Format: 'REPLACE message-number/message'";
-                // TODO: ADD logic to check the user request has both message-number and message, need to check delimiter '/'
             }
             else {
                 std::string messageNumberPlusMessage(&req[nextArgIndex]);
@@ -508,7 +531,6 @@ void* do_client (int sd) {
         pthread_mutex_unlock(&mon.mutex);
         // monitor code ends
          
-        std::cout<< "=======结束1======opened_fds.size()=== ans=="  <<  &ans[0] << std::endl;
 
         send(sd,&ans[0],ans.size(),0);
         send(sd,"\r\n",2,0);        // telnet expects \r\n
@@ -519,18 +541,13 @@ void* do_client (int sd) {
         send(sd,req,strlen(req),0);
         send(sd,"\n",1,0);
          */
-        std::cout<< "=======结束2======opened_fds.size()=== ans=="  <<  &ans[0] << std::endl;
-
-        if(stopCondition){                         //  🌟 改动 ?????????do we need to add this???
-            std::cout<< "=======从来不会进入的======" << std::endl;
+        
+        if (stopCondition) {
+            shutdown(sd,1);
             close(sd);
-            // delete[] opened_fds;
-           // exit(0);???????
-            pthread_mutex_lock(&currentRunningSlaveSocket_mutex);
-            currentRunningSlaveSocket.remove(sd);
-            pthread_mutex_unlock(&currentRunningSlaveSocket_mutex);
+            break;
         }
-
+        
     } // while ends
     
     
@@ -551,10 +568,10 @@ void* do_client (int sd) {
     pthread_mutex_unlock(&mon.mutex);
     // monitor code ends
     
-    
-    std::cout<< "=======do client 结束======" << std::endl;
     pthread_mutex_lock(&currentRunningSlaveSocket_mutex);
-    currentRunningSlaveSocket.remove(sd);
+    if (!currentRunningSlaveSocket.empty()) {
+        currentRunningSlaveSocket.remove(sd);
+    }
     pthread_mutex_unlock(&currentRunningSlaveSocket_mutex);
     
     return NULL;
@@ -562,63 +579,73 @@ void* do_client (int sd) {
 
 void signalHandlers(int sig) { //TODO: Handle all the signals
     // deinitialize everything and destruct everything
-    close(currentMasterSocket);
-    shutdown(currentMasterSocket,1);
+
     
-    // TODO: REDO part 1.4 for the current management part, especially for destorying the thread pool
+    std::cout << " ======signalHandlers==1=="  << std::endl;
     
-    
-    std::cout << " size of currentRunningSlaveSocket======" << currentRunningSlaveSocket.size() << std::endl;
-    
-   for (std::list<int>::iterator i = currentRunningSlaveSocket.begin();i != currentRunningSlaveSocket.end();i++) {
-        
-       pthread_mutex_lock(&currentRunningSlaveSocket_mutex);
-          
-       int slaveSock = (int)*i;
-       close(slaveSock);
-       shutdown(slaveSock,1);
-       
-       currentRunningSlaveSocket.remove(slaveSock);
-       pthread_mutex_unlock(&currentRunningSlaveSocket_mutex);
-      
-   }
     
     // signal all threads to exit after they finish their current work item
     pthread_mutex_lock(&mutex);
         stopCondition = true;
         pthread_cond_broadcast(&condition_var); // notify all threads
     pthread_mutex_unlock(&mutex);
+    
+    
+    std::cout << " =======currentMasterSocket=====" << currentMasterSocket << std::endl;
+     // Closes all the master sockets
+     close(currentMasterSocket);
+     shutdown(currentMasterSocket,1);
+     std::cout << " =======currentMasterSocket==========close(currentMasterSocket)====" << close(currentMasterSocket) << std::endl;
+    std::cout << " =======currentMasterSocket==========shutdown(currentMasterSocket,1)====" << shutdown(currentMasterSocket,1)<< std::endl;
 
-    // wait for all threasd to exit
-    for (auto& t : preallocatedThreadsPool) {
-        printf("杀掉进程\n");
-        pthread_join(t, nullptr);
+    // closes all the connections to all the clients
+     std::cout << " ======:iterator i = currentRunningSlaveS==size==" << currentRunningSlaveSocket.size() << std::endl;
+
+    for (std::list<int>::iterator i = currentRunningSlaveSocket.begin();i != currentRunningSlaveSocket.end();i++) {
+         
+        std::cout << " ======:iterator i = currentRunningSlaveS===1=" << *i << std::endl;
+        pthread_mutex_lock(&currentRunningSlaveSocket_mutex);
+           std::cout << " ======:iterator i = currentRunningSlaveS==2==" << *i << std::endl;
+
+        int slaveSock = (int)*i;
+        
+        close(slaveSock);
+        std::cout << " ======:iterator i = currentRunningSlaveS==3==================close(slaveSock);=====" <<close(slaveSock) << std::endl;
+
+        shutdown(slaveSock,1);
+        std::cout << " ======:iterator i = currentRunningSlaveS==3=================shutdown(slaveSock,1);=====" <<shutdown(slaveSock,1) << std::endl;
+
+        
+        std::cout << " ======:iterator i = currentRunningSlaveS==4==" << *i << std::endl;
+
+        pthread_mutex_unlock(&currentRunningSlaveSocket_mutex);
+       
     }
+     currentRunningSlaveSocket.clear();
+    
+    std::cout << " ======signalHandlers==2=="  << std::endl;
+    // wait for all threasd to exit, terminates all the preallocated threads
+    std::cout << " ======signalHandlers==2.01=="  << tcpQueue.size() <<std::endl;
+    for (auto& t : preallocatedThreadsPool) {
+        std::cout << " ======signalHandlers==2.02=="  << tcpQueue.size() <<std::endl;
+        std::cout << " ======signalHandlers==2.1=="  << std::endl;
+//        pthread_cancel(pthread_self());
+        
+        pthread_kill(t.thread, 3);
+        pthread_join(t.thread, nullptr);
+        std::cout << " ======signalHandlers==2.2=="  << std::endl;
+    }
+    std::cout << " ======signalHandlers==2.3=="  << std::endl;
     preallocatedThreadsPool.clear();
-     
-    stopCondition = false;
     
-    // startServer(-3);
+    std::cout << " ======signalHandlers==3=="  << std::endl;
+   // pthread_mutex_lock(&mutex);
+        stopCondition = false;
+   // pthread_mutex_unlock(&mutex);
     
-    /*
-    for(pthread_t i : preallocatedThreadsPool) {
-           pthread_join(i, NULL);
-        free(&i);
-    }*/
-    
-    // preallocatedThreadsPool.clear();
-    // TODO: Closes all the master sockets
-    
-    
-    // TODO: terminates all the preallocated threads
-   
-    
-   
-    // TODO: closes all the connections to all the clients
+    std::cout << " ======signalHandlers==4=="  << std::endl;
     
     if (sig == SIGQUIT) { // Quit the daemon
-        
-        // TODO: terminates the server
         
         /* Unlock and close lockfile */
         if (PIDFileDescriptor != -1) {
@@ -631,7 +658,6 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
         }
         
         running = 0;
-        // TODO: HANDLE: END THE SERVER
         
         /* Reset signal handling to default behavior */
         signal(SIGINT, SIG_DFL);
@@ -664,23 +690,16 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
         
         
         //  use preallocated threads. The number of threads to be preallocated is Tmax, so that Tmax is also a limit on concurrency.
-            int preallocatThreadsNumber = 20;
-            try { preallocatThreadsNumber = std::stoi(Tmax); } // The clients connect to our server on port bp.
-            catch (std::invalid_argument const &e) { std::cout << "Bad input: std::invalid_argument thrown" << '\n'; }
-            catch (std::out_of_range const &e) { std::cout << "Integer overflow: std::out_of_range thrown" << '\n'; }
-               
-            preallocatedThreadsPool.resize(preallocatThreadsNumber); // create a threadpoOl
-            
-        //    for(std::vector<pthread_t>::iterator it = preallocatedThreadsPool.begin(); it != preallocatedThreadsPool.end(); ++it) {
-        //        /* std::cout << *it; ... */
-        //        pthread_create(*it, NULL, threadFunctionUsedByThreadsPool, NULL);
-        //    }
-            
-            for(pthread_t &i : preallocatedThreadsPool) {
-                pthread_create(&i, NULL, threadFunctionUsedByThreadsPool, NULL);
-            }
+        int preallocatThreadsNumber = 20;
+        try { preallocatThreadsNumber = std::stoi(Tmax); } // The clients connect to our server on port bp.
+        catch (std::invalid_argument const &e) { std::cout << "Bad input: std::invalid_argument thrown" << '\n'; }
+        catch (std::out_of_range const &e) { std::cout << "Integer overflow: std::out_of_range thrown" << '\n'; }
+           
+        preallocatedThreadsPool.resize(preallocatThreadsNumber); // create a threadpoOl
+        for(structThread &i : preallocatedThreadsPool) {
+            pthread_create(&i.thread, NULL, threadFunctionUsedByThreadsPool, NULL);
+        }
 
-        
          startServer(msock);
          
         
