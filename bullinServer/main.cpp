@@ -45,12 +45,12 @@ void logger(const char * msg) {
 }
 
 // 1.4 Concurrency Management
-struct structThread {
-    pthread_t thread;
-    bool idleState;
-};
+//struct structThread {
+//    pthread_t thread;
+//    bool idleState;
+//};
 
-std::vector<structThread> preallocatedThreadsPool;
+std::vector<pthread_t> preallocatedThreadsPool;
 std::queue<int> tcpQueue;
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -247,8 +247,8 @@ int main(int argc, char** argv) {
     catch (std::out_of_range const &e) { std::cout << "Integer overflow: std::out_of_range thrown" << '\n'; }
        
     preallocatedThreadsPool.resize(preallocatThreadsNumber); // create a threadpoOl
-    for(structThread &i : preallocatedThreadsPool) {
-        pthread_create(&i.thread, NULL, threadFunctionUsedByThreadsPool, NULL);
+    for(pthread_t &i : preallocatedThreadsPool) {
+        pthread_create(&i, NULL, threadFunctionUsedByThreadsPool, NULL);
     }
     
     startServer(msock);
@@ -631,8 +631,8 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
         std::cout << " ======signalHandlers==2.1=="  << std::endl;
 //        pthread_cancel(pthread_self());
         
-        pthread_kill(t.thread, 3);
-        pthread_join(t.thread, nullptr);
+//        pthread_kill(t, 3);
+        pthread_join(t, nullptr);
         std::cout << " ======signalHandlers==2.2=="  << std::endl;
     }
     std::cout << " ======signalHandlers==2.3=="  << std::endl;
@@ -696,8 +696,8 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
         catch (std::out_of_range const &e) { std::cout << "Integer overflow: std::out_of_range thrown" << '\n'; }
            
         preallocatedThreadsPool.resize(preallocatThreadsNumber); // create a threadpoOl
-        for(structThread &i : preallocatedThreadsPool) {
-            pthread_create(&i.thread, NULL, threadFunctionUsedByThreadsPool, NULL);
+        for(pthread_t &i : preallocatedThreadsPool) {
+            pthread_create(&i, NULL, threadFunctionUsedByThreadsPool, NULL);
         }
 
          startServer(msock);
