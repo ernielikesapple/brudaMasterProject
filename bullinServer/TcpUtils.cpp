@@ -298,7 +298,7 @@ std::string bbfileReader (std::string filename, std::string messageNumber) {
         std::string messageNumberInBbfile = line.substr(0, line.find("/"));
         if (messageNumber == messageNumberInBbfile) {
             size_t foundSlash= line.find_first_of('/');
-            std::string posterNmessage = line.substr(foundSlash, line.length());
+            std::string posterNmessage = line.substr(foundSlash+1, line.length());
             returnString = "MESSAGE " + messageNumber + " " + posterNmessage; // notice don't return before hit the lines of code with mutex
             break;  // when found the message just get out the while and return the message
         } else {
@@ -447,11 +447,9 @@ std::string bbfileReplacer (std::string filename, std::string messageNumber, std
     std::string line;
     bool foundMessageNumber = false;
     while ( getline (bbFile,line) )
-    {   size_t foundMN = line.find(messageNumber);
-        if (foundMN != std::string::npos) {
-            size_t foundSlash= line.find_first_of('/');
-            std::string posterNmessage = line.substr(foundSlash, line.length());
-            
+    {
+        std::string messageNumberInBbfile = line.substr(0, line.find("/"));
+        if (messageNumber == messageNumberInBbfile) {
             line.clear();
             line = messageNumber + "/" + newPoster + "/" + newMessage;
             foundMessageNumber = true;
