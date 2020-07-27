@@ -108,7 +108,16 @@ void ConfigFileHandler::configFileReader(std::string filename) {
         if (foundDelimeter != string::npos) {
             key  = configStringInEachLine.substr(0, foundDelimeter);
             value = configStringInEachLine.substr(foundDelimeter+1);
-            configDataMap.insert(std::pair<string, string>(key, value)); // store key value pair into map
+            
+            // update value in the value in the map
+            map<string, string>::iterator it;
+            it = configDataMap.find(key);
+            if (it != configDataMap.end()) {
+                it -> second = value;
+            } else {
+                configDataMap.insert(std::pair<string, string>(key, value));
+            }
+            
         }
     }
     configFile.close();

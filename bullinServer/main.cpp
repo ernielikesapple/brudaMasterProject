@@ -44,24 +44,16 @@ void logger(const char * msg) {
     pthread_mutex_unlock(&logger_mutex);
 }
 
-// 1.4 Concurrency Management
-//struct structThread {
-//    pthread_t thread;
-//    bool idleState;
-//};
-
 std::vector<pthread_t> preallocatedThreadsPool;
 std::queue<int> tcpQueue;
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t condition_var = PTHREAD_COND_INITIALIZER;
-// pthread_cond_t quit_condition_var = PTHREAD_COND_INITIALIZER; // TODO: deal with Sign hup,
 void* threadFunctionUsedByThreadsPool(void *arg);
 std::atomic<bool> stopCondition(false);
 
-std::list<int> currentRunningSlaveSocket;
-pthread_mutex_t currentRunningSlaveSocket_mutex = PTHREAD_MUTEX_INITIALIZER;
-
+//std::vector<pthread_t> currentBusyThreads;
+//pthread_mutex_t currentBusyThreads_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // server para
 /*
@@ -71,20 +63,17 @@ pthread_mutex_t currentRunningSlaveSocket_mutex = PTHREAD_MUTEX_INITIALIZER;
  * report meaningful information.
  */
 
-struct monitor_t {
-    pthread_mutex_t mutex;
-    unsigned int con_cur;
-    unsigned int con_count;
-    unsigned int con_time;
-    unsigned int bytecount;
-};
+//struct monitor_t {
+//    pthread_mutex_t mutex;
+//    unsigned int con_cur;
+//    unsigned int con_count;
+//    unsigned int con_time;
+//    unsigned int bytecount;
+//};
 
 // Monitor statistics:
-monitor_t mon;
+//monitor_t mon;
 
-
-bool running = 0;
-int currentMasterSocket = 0;
 // all the singleTon
 TcpUtils* tcpUtils = TcpUtils::newAInstance();
 ConfigFileHandler* configFileHandler = ConfigFileHandler::newAInstance();
@@ -100,15 +89,9 @@ void closeServer();  // TODO: implement this function
 /*
 * The function that implements the monitor thread.
 */
-void* monitor (void* ignored);
+//void* monitor (void* ignored);
 void* do_client (int sd);
 
-
-// 1.3 The Bulletin Board File
-/*
- * The access control structure for the opened files (initialized in
- * the main function), and its size.
- */
 
 
 int main(int argc, char** argv) {
@@ -221,19 +204,20 @@ int main(int argc, char** argv) {
 
     int msock;               // master and slave socket
     msock = passivesocket(port,qlen);
-    currentMasterSocket = (int)msock;
+
     if (msock < 0) {
      perror("passivesocket");
+     exit(0); // this is where the program mostly has been terminated
     }
 
     printf("Server up and listening on port %d.\n", port);
     // Setting up the thread creation: for monitor thread
-    pthread_t tt;
-    pthread_attr_t ta;
-    pthread_attr_init(&ta);
-    pthread_attr_setdetachstate(&ta,PTHREAD_CREATE_DETACHED);
+   // pthread_t tt;
+//    pthread_attr_t ta;
+//    pthread_attr_init(&ta);
+//    pthread_attr_setdetachstate(&ta,PTHREAD_CREATE_DETACHED);
     // Launch the monitor:
-    pthread_create(&tt, &ta, monitor, NULL);
+ //   pthread_create(&tt, &ta, monitor, NULL);
     
     
     flocks.mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -253,10 +237,6 @@ int main(int argc, char** argv) {
     
     startServer(msock);
     
-    
-    
-    
-    
     return 0;
 }
 
@@ -266,54 +246,20 @@ int startServer(int msock) {
     struct sockaddr_in client_addr; // the address of the client...
     unsigned int client_addr_len = sizeof(client_addr); // ... and its length
     
-    
     while (!stopCondition) {
         // Accept connection:
-        if (!stopCondition) {
-             ssock = ::accept((int)msock, (struct sockaddr*)&client_addr, &client_addr_len);   //  the return value is a socket
-            
-//            struct pollfd pollrec;
-//            pollrec.fd = msock;
-//            pollrec.events = POLLIN;
-//            ssock = poll(&pollrec,client_addr_len,100000000);
-            
-            
-//            const int ALEN = 256;
-//            char requestFromClient[ALEN];
-//            ssock = recv_nonblock(msock, requestFromClient, ALEN-1, 50*60*1000);
-            
-            
-            // TODO:: add logic to deal with time out
-        } else {
-            return 1;
-        }
+        ssock = ::accept((int)msock, (struct sockaddr*)&client_addr, &client_addr_len);   //  the return value is a socket
     
         if (ssock < 0) {
              if (errno == EINTR) continue;
              perror("accept");
-             running =0;
              return 0;
-         // exit(0);
         } else {
             //  incoming client will wait in the TCP queue until something becomes available
             pthread_mutex_lock(&mutex); // one thread mess with the queue at one time
-            
             tcpQueue.push(ssock);
             pthread_cond_signal(&condition_var);
             pthread_mutex_unlock(&mutex);
-                    
-            pthread_mutex_lock(&currentRunningSlaveSocket_mutex);
-            currentRunningSlaveSocket.push_back(ssock);
-            pthread_mutex_unlock(&currentRunningSlaveSocket_mutex);
-            running = 1;
-            
-            /*
-             // Create thread instead of fork:  no preallocation
-             if ( pthread_create(&tt, &ta, (void* (*) (void*))do_client, (void*)ssock) != 0 ) {
-                 perror("pthread_create");
-                 
-             }
-             */
         }
         
      // main thread continues with the loop...
@@ -330,40 +276,21 @@ void* threadFunctionUsedByThreadsPool(void *arg) {
            // wait for a task to be queued
        while (tcpQueue.empty() && !stopCondition) {
            pthread_cond_wait(&condition_var, &mutex); // wait for the signal from other thread to deal with client otherwise sleep
-           std::cout << " ======threadFunctionUsedByThreadsPool==   等待结束=="  << std::endl;
        }
        if (stopCondition == false) {
-        std::cout << " ======threadFunctionUsedByThreadsPool==  1=="  << std::endl;
-
            newClient = tcpQueue.front();
            tcpQueue.pop();
-           std::cout << " ======threadFunctionUsedByThreadsPool==  2=="  << std::endl;
-
            // exit lock while operating on a task
            pthread_mutex_unlock(&mutex);
-           std::cout << " ======threadFunctionUsedByThreadsPool==  3=="  << std::endl;
-
            if (newClient) {
-               std::cout << " ======threadFunctionUsedByThreadsPool==  4=="  << std::endl;
-
                do_client(newClient);
-               std::cout << " ======threadFunctionUsedByThreadsPool==  5=="  << std::endl;
-
            }
-           std::cout << " ======threadFunctionUsedByThreadsPool==  6=="  << std::endl;
-
            // re-acquire the lock
            pthread_mutex_lock(&mutex);
-           std::cout << " ======threadFunctionUsedByThreadsPool==  7=="  << std::endl;
-
        }
-        std::cout << " ======threadFunctionUsedByThreadsPool==  while 最后走一次=="  << std::endl;
-
     }
    // release the lock before exiting the function
-    std::cout << " ======threadFunctionUsedByThreadsPool== threadFunctionUsedByThreadsPool==出口1=="  << std::endl;
-   pthread_mutex_unlock(&mutex);
-    std::cout << " ======threadFunctionUsedByThreadsPool== threadFunctionUsedByThreadsPool===出口2=="  << std::endl;
+    pthread_mutex_unlock(&mutex);
    return NULL;
 }
 
@@ -376,7 +303,10 @@ void* threadFunctionUsedByThreadsPool(void *arg) {
  * server.
  */
 void* do_client (int sd) {
-    std::cout << " ======do_client==  1=="  << std::endl;
+    
+//    pthread_mutex_lock(&currentBusyThreads_mutex);
+//    currentBusyThreads.push_back(pthread_self());
+//    pthread_mutex_unlock(&currentBusyThreads_mutex);
 
     char req[MAX_LEN];   // the content sent by the client
     // const char* ack = "ACK: ";
@@ -390,9 +320,9 @@ void* do_client (int sd) {
     time_t start = time(0);
     printf("Incoming client...\n");
     // monitor code begins
-    pthread_mutex_lock(&mon.mutex);                    //  when u define a mutex, you will define a critical region
-    mon.con_cur++;
-    pthread_mutex_unlock(&mon.mutex);
+//    pthread_mutex_lock(&mon.mutex);                    //  when u define a mutex, you will define a critical region
+//    mon.con_cur++;
+//    pthread_mutex_unlock(&mon.mutex);
     // monitor code ends
 
     // Loop while the client has something to say...
@@ -427,16 +357,13 @@ void* do_client (int sd) {
 
             printf("Outgoing client...\n");
             // monitor code begins
-            pthread_mutex_lock(&mon.mutex);
-            mon.con_cur--;
-            mon.con_count++;
-            mon.con_time += time(0) - start;
-            pthread_mutex_unlock(&mon.mutex);
+//            pthread_mutex_lock(&mon.mutex);
+//            mon.con_cur--;
+//            mon.con_count++;
+//            mon.con_time += time(0) - start;
+//            pthread_mutex_unlock(&mon.mutex);
             // monitor code endsb
-            
-            pthread_mutex_lock(&currentRunningSlaveSocket_mutex);
-            currentRunningSlaveSocket.remove(sd);
-            pthread_mutex_unlock(&currentRunningSlaveSocket_mutex);
+        
             
             
             return NULL;
@@ -525,10 +452,9 @@ void* do_client (int sd) {
         
         
         // monitor code begins
-        pthread_mutex_lock(&mon.mutex);
-        mon.bytecount += n;
-        // TODO: write into bbfile
-        pthread_mutex_unlock(&mon.mutex);
+//        pthread_mutex_lock(&mon.mutex);
+//        mon.bytecount += n;
+//        pthread_mutex_unlock(&mon.mutex);
         // monitor code ends
          
 
@@ -561,28 +487,18 @@ void* do_client (int sd) {
     
     
     // monitor code begins
-    pthread_mutex_lock(&mon.mutex);
-    mon.con_cur--;
-    mon.con_count++;
-    mon.con_time += time(0) - start;
-    pthread_mutex_unlock(&mon.mutex);
+//    pthread_mutex_lock(&mon.mutex);
+//    mon.con_cur--;
+//    mon.con_count++;
+//    mon.con_time += time(0) - start;
+//    pthread_mutex_unlock(&mon.mutex);
     // monitor code ends
-    
-    pthread_mutex_lock(&currentRunningSlaveSocket_mutex);
-    if (!currentRunningSlaveSocket.empty()) {
-        currentRunningSlaveSocket.remove(sd);
-    }
-    pthread_mutex_unlock(&currentRunningSlaveSocket_mutex);
     
     return NULL;
 }
 
 void signalHandlers(int sig) { //TODO: Handle all the signals
     // deinitialize everything and destruct everything
-
-    
-    std::cout << " ======signalHandlers==1=="  << std::endl;
-    
     
     // signal all threads to exit after they finish their current work item
     pthread_mutex_lock(&mutex);
@@ -590,61 +506,30 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
         pthread_cond_broadcast(&condition_var); // notify all threads
     pthread_mutex_unlock(&mutex);
     
+    // Closes all the master sockets  // TODO: can't close master socket, since it's blocking on the
+//     close(currentMasterSocket);
+//     shutdown(currentMasterSocket,1);
     
-    std::cout << " =======currentMasterSocket=====" << currentMasterSocket << std::endl;
-     // Closes all the master sockets
-     close(currentMasterSocket);
-     shutdown(currentMasterSocket,1);
-     std::cout << " =======currentMasterSocket==========close(currentMasterSocket)====" << close(currentMasterSocket) << std::endl;
-    std::cout << " =======currentMasterSocket==========shutdown(currentMasterSocket,1)====" << shutdown(currentMasterSocket,1)<< std::endl;
-
-    // closes all the connections to all the clients
-     std::cout << " ======:iterator i = currentRunningSlaveS==size==" << currentRunningSlaveSocket.size() << std::endl;
-
-    for (std::list<int>::iterator i = currentRunningSlaveSocket.begin();i != currentRunningSlaveSocket.end();i++) {
-         
-        std::cout << " ======:iterator i = currentRunningSlaveS===1=" << *i << std::endl;
-        pthread_mutex_lock(&currentRunningSlaveSocket_mutex);
-           std::cout << " ======:iterator i = currentRunningSlaveS==2==" << *i << std::endl;
-
-        int slaveSock = (int)*i;
-        
-        close(slaveSock);
-        std::cout << " ======:iterator i = currentRunningSlaveS==3==================close(slaveSock);=====" <<close(slaveSock) << std::endl;
-
-        shutdown(slaveSock,1);
-        std::cout << " ======:iterator i = currentRunningSlaveS==3=================shutdown(slaveSock,1);=====" <<shutdown(slaveSock,1) << std::endl;
-
-        
-        std::cout << " ======:iterator i = currentRunningSlaveS==4==" << *i << std::endl;
-
-        pthread_mutex_unlock(&currentRunningSlaveSocket_mutex);
-       
-    }
-     currentRunningSlaveSocket.clear();
+    // closes all the connections to all the clients   // TODO: can't implement this
     
-    std::cout << " ======signalHandlers==2=="  << std::endl;
+    
+//    for (auto& t : currentBusyThreads) {
+//            std::cout << " ======signalHandlers==currentBusyThreads 1==" << t << std::endl;
+//        pthread_cancel(t);
+//             pthread_join(t, nullptr);
+//        //    pthread_kill(t, 9);
+////            std::cout << " ======signalHandlers==2.2=currentBusyThreads=" << t << std::endl;
+//    }
+//    currentBusyThreads.clear();
+    
+    
     // wait for all threasd to exit, terminates all the preallocated threads
-    std::cout << " ======signalHandlers==2.01=="  << tcpQueue.size() <<std::endl;
-    for (auto& t : preallocatedThreadsPool) {
-        std::cout << " ======signalHandlers==2.02=="  << tcpQueue.size() <<std::endl;
-        std::cout << " ======signalHandlers==2.1=="  << std::endl;
-//        pthread_cancel(pthread_self());
-        
-//        pthread_kill(t, 3);
-        pthread_join(t, nullptr);
-        std::cout << " ======signalHandlers==2.2=="  << std::endl;
-    }
-    std::cout << " ======signalHandlers==2.3=="  << std::endl;
-    preallocatedThreadsPool.clear();
     
-    std::cout << " ======signalHandlers==3=="  << std::endl;
-   // pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(&mutex);
         stopCondition = false;
-   // pthread_mutex_unlock(&mutex);
-    
-    std::cout << " ======signalHandlers==4=="  << std::endl;
-    
+    pthread_mutex_unlock(&mutex);
+
+
     if (sig == SIGQUIT) { // Quit the daemon
         
         /* Unlock and close lockfile */
@@ -656,17 +541,12 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
         if (PIDFile != NULL) {
             remove(PIDFile);
         }
-        
-        running = 0;
-        
+                
         /* Reset signal handling to default behavior */
-        signal(SIGINT, SIG_DFL);
+     //   signal(SIGINT, SIG_DFL);
     } else if (sig == SIGHUP) {
-        
-        std::cout << "---------------------------3333333------------------------------------ " << bp << std::endl;
-        loadConfigFile(); // reload the config file // TODO: need to fix this bug after the server up ,  manually change the config file call SIGHUP again, can't read new conif content?
-        std::cout << "----------------------------------4444444----------------------------- " << bp << std::endl;
-        //  initializeServer();
+            
+        loadConfigFile(); // reload the config file
         
         
         int port = 9000;   // port to listen to
@@ -681,8 +561,6 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
 
         int msock;               // master and slave socket
         msock = passivesocket(port,qlen);
-        currentMasterSocket = (int)msock;
-        std::cout << "======================currentMasterSocket============================"<< currentMasterSocket << '\n';
         if (msock < 0) {
          perror("passivesocket");
         }
@@ -706,6 +584,7 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
     } else if (sig == SIGCHLD) {
         // TODO: handle SIGCHLD
     }
+    signal(SIGINT, SIG_DFL);
 }
 
 // detail implementation of each function
@@ -715,7 +594,6 @@ void loadConfigFile() {
         
         configFileHandler ->configFileValueGetter("THMAX", Tmax);  // get all the value from the map into all the variabbles on this page
         configFileHandler ->configFileValueGetter("BBPORT", bp);
-        std::cout << "00000000--------------------------------------------------------------- " << bp << std::endl;
         configFileHandler ->configFileValueGetter("SYNCPORT", sp);
         configFileHandler ->configFileValueGetter("BBFILE", bbfile);
         if (!std::ifstream(bbfile)) { // make sure the bbfile exist, so the server can start up normally
@@ -804,29 +682,29 @@ void daemonize() {
 }
 
 
-void* monitor (void* ignored) {
-    const int wakeup_interval = 120; // 2 minutes
-    int connections;
-    
-    while (1) {
-        sleep(wakeup_interval);
-        pthread_mutex_lock(&mon.mutex);
-        // time_t now = time(0);
-        if (mon.con_count == 0)
-            connections = 1;
-        else
-            connections = mon.con_count;
-        /*
-        printf("MON: %s\n", ctime(&now));
-        printf("MON: currently serving %d clients\n", mon.con_cur);
-        printf("MON: average connection time is %d seconds.\n",
-               (int)((float)mon.con_time/(float)connections));
-        printf("MON: transferred %d bytes per connection on average.\n",
-               (int)((float)mon.bytecount/(float)connections));
-        printf("MON: (end of information)\n");
-         */
-        
-        pthread_mutex_unlock(&mon.mutex);
-    }
-    return 0;
-}
+//void* monitor (void* ignored) {
+//    const int wakeup_interval = 120; // 2 minutes
+//    int connections;
+//    
+//    while (1) {
+//        sleep(wakeup_interval);
+//        pthread_mutex_lock(&mon.mutex);
+//        // time_t now = time(0);
+//        if (mon.con_count == 0)
+//            connections = 1;
+//        else
+//            connections = mon.con_count;
+//        /*
+//        printf("MON: %s\n", ctime(&now));
+//        printf("MON: currently serving %d clients\n", mon.con_cur);
+//        printf("MON: average connection time is %d seconds.\n",
+//               (int)((float)mon.con_time/(float)connections));
+//        printf("MON: transferred %d bytes per connection on average.\n",
+//               (int)((float)mon.bytecount/(float)connections));
+//        printf("MON: (end of information)\n");
+//         */
+//        
+//        pthread_mutex_unlock(&mon.mutex);
+//    }
+//    return 0;
+//}
