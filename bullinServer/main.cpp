@@ -317,7 +317,7 @@ void* do_client (int sd) {
     struct User user;
     user.username = "nobody";
     
-    time_t start = time(0);
+//    time_t start = time(0); 
     printf("Incoming client...\n");
     // monitor code begins
 //    pthread_mutex_lock(&mon.mutex);                    //  when u define a mutex, you will define a critical region
