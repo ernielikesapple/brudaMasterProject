@@ -52,8 +52,8 @@ pthread_cond_t condition_var = PTHREAD_COND_INITIALIZER;
 void* threadFunctionUsedByThreadsPool(void *arg);
 std::atomic<bool> stopCondition(false);
 
-//std::vector<pthread_t> currentBusyThreads;
-//pthread_mutex_t currentBusyThreads_mutex = PTHREAD_MUTEX_INITIALIZER;
+std::vector<pthread_t> currentBusyThreads;
+pthread_mutex_t currentBusyThreads_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // server para
 /*
@@ -304,9 +304,9 @@ void* threadFunctionUsedByThreadsPool(void *arg) {
  */
 void* do_client (int sd) {
     
-//    pthread_mutex_lock(&currentBusyThreads_mutex);
-//    currentBusyThreads.push_back(pthread_self());
-//    pthread_mutex_unlock(&currentBusyThreads_mutex);
+    pthread_mutex_lock(&currentBusyThreads_mutex);
+    currentBusyThreads.push_back(pthread_self());
+    pthread_mutex_unlock(&currentBusyThreads_mutex);
 
     char req[MAX_LEN];   // the content sent by the client
     // const char* ack = "ACK: ";
@@ -509,18 +509,18 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
     // Closes all the master sockets  // TODO: can't close master socket, since it's blocking on the
 //     close(currentMasterSocket);
 //     shutdown(currentMasterSocket,1);
+     
+    // TODO: wake up accept blokcing call using pipe() https://stackoverflow.com/questions/2486335/wake-up-thread-blocked-on-accept-call
+    
     
     // closes all the connections to all the clients   // TODO: can't implement this
     
     
-//    for (auto& t : currentBusyThreads) {
-//            std::cout << " ======signalHandlers==currentBusyThreads 1==" << t << std::endl;
-//        pthread_cancel(t);
-//             pthread_join(t, nullptr);
-//        //    pthread_kill(t, 9);
-////            std::cout << " ======signalHandlers==2.2=currentBusyThreads=" << t << std::endl;
-//    }
-//    currentBusyThreads.clear();
+    for (auto& t : currentBusyThreads) { // clean up the thread which is blocked on read()
+        pthread_cancel(t);
+        pthread_join(t, nullptr);
+    }
+    currentBusyThreads.clear();
     
     
     // wait for all threasd to exit, terminates all the preallocated threads
