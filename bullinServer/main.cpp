@@ -26,6 +26,7 @@ std::string bp = "9000";   // keyValue in the config file: BBPORT , port number 
 std::string sp = "10000";  // keyValue in the config file: SYNCPORT,  port number for server server communication
 std::string bbfile = "bbfile";   // keyValue in the config file: BBFILE               // config fileName mandatory data if it's empty then refuse to start the server,
 std::string peers = "";    // keyValue in the config file: PEERS // TODO: to verify the value inside the server function make sure it has value
+std::map<std::string, int> peersHostNPortMap;
 bool d = true;   // keyValue in the config file: DAEMON
 bool D = false; // keyValue in the config file: DEBUG
 
@@ -104,7 +105,7 @@ void* do_syncronazation (int sd);
 
 int main(int argc, char** argv) {
     
-    loadConfigFile();
+    loadConfigFile(); // load the value from config file into all the global variables
     
     umask(0022); // Sets an appropriate umask.
     
@@ -122,7 +123,7 @@ int main(int argc, char** argv) {
     }
     
     // Retrieve the options:
-    std::string peersString = "";
+    std::string peersString = ""; // use a string to append/take all the values from argv[optind] , and then after the while loop take everything into the config file
     while (optind < argc) {
         if ( (option = getopt(argc, argv, "b:c:T:t:p:s:fdh")) != -1 ) {  // for each option...
             switch ( option ) {
@@ -171,17 +172,40 @@ int main(int argc, char** argv) {
                     break;
             }
         } else {
-            // TODO: use a string to append/take all the values from argv[optind] , and then after the while loop take everything into the config file
-            std::cout << "handle non-switch argument are: " << argv[optind] << std::endl;
-            // TODO: check if the non-switch argument are not meet the requirements of host:port, we need to exits
+            
             if (strcmp(argv[optind], "") != 0) {
-                peersString = peersString + argv[optind] + " ";
+                std::string peerStringRaw = argv[optind];
+                size_t found  = peerStringRaw.find(":");
+                peersHostNPortMap.clear(); // clean the value from last time use the latest value from command line
+                // check if the non-switch argument are not meet the requirements of host:port, we need to exits
+                if (found != std::string::npos) { // check the host and port are in the correct format
+                    std::string domainRaw = peerStringRaw.substr(0, found); // check if host is valide
+                    struct hostent *h;
+                    if ((h=gethostbyname(domainRaw.c_str())) == NULL) {
+                    std::cerr << "non-switch argument are not in the correct format and the host supplied is not available, format :  'host:port host:post host:post...' " << std::endl;
+                    std::exit(-1);
+                    }
+                    // check the port is valid
+                    std::string portRaw = peerStringRaw.substr(found+1, peerStringRaw.length());
+                    std::string::const_iterator itForPortRaw = portRaw.begin();
+                    while (itForPortRaw != portRaw.end() && std::isdigit(*itForPortRaw)) ++itForPortRaw;
+                    if(!portRaw.empty() && itForPortRaw == portRaw.end()) { // check all the ports are digits
+                        peersHostNPortMap.insert({domainRaw,stoi(portRaw)}); // update the map in the global variable for later uses
+                        // use a string to append/take all the values from argv[optind] , and then after the while loop take everything into the config file
+                        peersString = peersString + argv[optind] + " "; // update peerString for recoring in the config file
+                    } else {
+                        std::cerr << "non-switch argument are not in the correct format and the prot number should be all in digits, format :  'host:port host:post host:post...'" << std::endl;
+                        std::exit(-1);
+                    }
+                } else {
+                    std::cerr << "non-switch argument are not in the correct format, format :  'host:port host:post host:post...'" << std::endl;
+                    exit(0);
+                }
             }
             optind++;
         }
     }
     
-    // TODO: handle,       check and see other start options check the documents again see if there is any other switch options
     if (peersString.length() != 0) {
         configFileHandler -> configFileModifier(configFileName,"PEERS",peersString);
     }
@@ -609,7 +633,51 @@ void loadConfigFile() {
             std::cerr << "bbfile Not provided! Notice you must have a bbfile under current directory and Notice you should name the bbfile file like 'bbfile' " << std::endl;
             exit(0);
         }
-        configFileHandler ->configFileValueGetter("PEERS", peers); // TODO: to verify the value inside the server function make sure it has value
+        
+        configFileHandler ->configFileValueGetter("PEERS", peers);
+
+        if (strcmp(peers.c_str(), "") != 0) {  // check the peers are all in the valide format and to verify the value inside the server function make sure it has value
+            std::string::iterator itForPeers = peers.begin();
+            peersHostNPortMap.clear(); // clean the value from last time use the latest value from config file
+            size_t theBeginningIndexOfAHostNPort = 0;
+            while (itForPeers != peers.end()) {
+                const char currentChar = *itForPeers;
+                auto index = std::distance(peers.begin(), itForPeers); // get the current index of the iterator
+                const char nextChar = *(itForPeers+1);
+
+                if ((currentChar == ' '&& nextChar != ' ') || (itForPeers - peers.begin() == (peers.length()-1))) { // skip all the space between host:port host port, or there is only one host port
+                    std::string peerStringRaw = peers.substr(theBeginningIndexOfAHostNPort, index);
+                    theBeginningIndexOfAHostNPort = index;  // the index after the last host:port + space
+                    
+                    peerStringRaw.erase(std::remove_if(peerStringRaw.begin(), peerStringRaw.end(), ::isspace),peerStringRaw.end()); // remove the white space
+                    
+                    size_t found  = peerStringRaw.find(":");
+                    if (found != std::string::npos) { // check the host and port are in the correct format
+                        std::string domainRaw = peerStringRaw.substr(0, found); // check if host is valide
+                        struct hostent *h;
+                        if ((h=gethostbyname(domainRaw.c_str())) == NULL) {
+
+                            std::cerr << "warning: peers in the config file are not in the correct format and the host supplied is not available, format :  'peers=host:port host:post host:post...' " << std::endl;
+                            break;
+                        }
+                        // check the port is valid
+                        std::string portRaw = peerStringRaw.substr(found+1, peerStringRaw.length());
+                        std::string::const_iterator itForPortRaw = portRaw.begin();
+                        while (itForPortRaw != portRaw.end() && std::isdigit(*itForPortRaw)) ++itForPortRaw;
+                        if(!portRaw.empty() && itForPortRaw == portRaw.end()) {
+                            peersHostNPortMap.insert({domainRaw,stoi(portRaw)});
+                        } else {
+                            std::cerr << "warning: peers in the config file are not in the correct format and the port number should be all in digits, format :  'peers=host:port host:post host:post...' " << std::endl;
+                        }
+                        
+                    } else {
+                        std::cerr << "warning: peers in the config file are not in the correct format, format :  'peers=host:port host:post host:post...' " << std::endl;
+                    }
+                }
+                itForPeers++;
+            }
+        }
+        
         
         std::string tempStringBoolean_d = "";
         configFileHandler ->configFileValueGetter("DAEMON", tempStringBoolean_d);

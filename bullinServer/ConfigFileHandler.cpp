@@ -96,7 +96,6 @@ void ConfigFileHandler::configFileReader(std::string filename) {
     string line;
     while ( getline (configFile,line) )
     {
-        line.erase(std::remove_if(line.begin(), line.end(), ::isspace),line.end()); // remove the white space
         if(line[0] == '#' || line.empty()) continue; // skip comment
         
         size_t foundComments = line.find_first_of('#');  // if not find the # it will return a very large number so that the next line can the whole text,
@@ -109,7 +108,7 @@ void ConfigFileHandler::configFileReader(std::string filename) {
             key  = configStringInEachLine.substr(0, foundDelimeter);
             value = configStringInEachLine.substr(foundDelimeter+1);
             
-            // update value in the value in the map
+            // update value in the value in the map or create a new value for and insert into the map
             map<string, string>::iterator it;
             it = configDataMap.find(key);
             if (it != configDataMap.end()) {
