@@ -33,6 +33,8 @@ char const* PIDFile = "bbserv.pid"; // the lock file, to lock the critical regio
 static int PIDFileDescriptor = -1;
 
 char const* bbservLogFile = "bbserv.log"; // redirct all the output to this file when under daemon mode
+
+// log facility
 pthread_mutex_t logger_mutex;
 void logger(const char * msg) {
     pthread_mutex_lock(&logger_mutex);
@@ -44,6 +46,7 @@ void logger(const char * msg) {
     pthread_mutex_unlock(&logger_mutex);
 }
 
+// thread pool related
 std::vector<pthread_t> preallocatedThreadsPool;
 std::queue<int> tcpQueue;
 
@@ -83,14 +86,19 @@ void loadConfigFile();
 void daemonize();
 void signalHandlers(int sig);
 
-int startServer(int msock);
+pthread_t clientServerThread;  // communicate with client
+void*  startServer(void *arg);
 void closeServer();  // TODO: implement this function
-
+int currentMasterSocket;
 /*
 * The function that implements the monitor thread.
 */
 //void* monitor (void* ignored);
 void* do_client (int sd);
+
+pthread_t slaveServerThread;  // server to server communication
+void*  startUpSlaveServer(void *arg);
+void* do_syncronazation (int sd);
 
 
 
@@ -192,6 +200,38 @@ int main(int argc, char** argv) {
     
     pthread_mutex_init(&logger_mutex, 0);
     
+    
+    // Setting up the thread creation: for monitor thread
+   // pthread_t tt;
+//    pthread_attr_t ta;
+//    pthread_attr_init(&ta);
+//    pthread_attr_setdetachstate(&ta,PTHREAD_CREATE_DETACHED);
+    // Launch the monitor:
+ //   pthread_create(&tt, &ta, monitor, NULL);
+    
+    
+    flocks.mutex = PTHREAD_MUTEX_INITIALIZER;
+    flocks.can_write = PTHREAD_COND_INITIALIZER;
+    flocks.reads = 0;
+    
+    
+    
+    pthread_create(&clientServerThread, NULL, startServer, NULL);
+    pthread_create(&slaveServerThread, NULL, startUpSlaveServer, NULL);
+
+    
+    
+    /* Wait till threads are complete before main continues. Unless we  */
+    /* wait we run the risk of executing an exit which will terminate   */
+    /* the process and all threads before the threads have completed.   */
+    pthread_join(clientServerThread, NULL);
+    pthread_join(slaveServerThread, NULL);
+    
+    return 0;
+}
+
+void*  startServer(void *arg) {
+    
     int port = 9000;   // port to listen to
     try { port = std::stoi(bp); } // The clients connect to our server on port bp.
     catch (std::invalid_argument const &e) { std::cout << "Bad input: std::invalid_argument thrown" << '\n'; }
@@ -211,18 +251,7 @@ int main(int argc, char** argv) {
     }
 
     printf("Server up and listening on port %d.\n", port);
-    // Setting up the thread creation: for monitor thread
-   // pthread_t tt;
-//    pthread_attr_t ta;
-//    pthread_attr_init(&ta);
-//    pthread_attr_setdetachstate(&ta,PTHREAD_CREATE_DETACHED);
-    // Launch the monitor:
- //   pthread_create(&tt, &ta, monitor, NULL);
-    
-    
-    flocks.mutex = PTHREAD_MUTEX_INITIALIZER;
-    flocks.can_write = PTHREAD_COND_INITIALIZER;
-    flocks.reads = 0;
+    currentMasterSocket = msock;
     
     //  use preallocated threads. The number of threads to be preallocated is Tmax, so that Tmax is also a limit on concurrency.
     int preallocatThreadsNumber = 20;
@@ -235,13 +264,6 @@ int main(int argc, char** argv) {
         pthread_create(&i, NULL, threadFunctionUsedByThreadsPool, NULL);
     }
     
-    startServer(msock);
-    
-    return 0;
-}
-
-
-int startServer(int msock) {
     int ssock;
     struct sockaddr_in client_addr; // the address of the client...
     unsigned int client_addr_len = sizeof(client_addr); // ... and its length
@@ -265,7 +287,7 @@ int startServer(int msock) {
      // main thread continues with the loop...
     }
     
-    return 1;
+    return NULL;
     
 }
 
@@ -423,6 +445,8 @@ void* do_client (int sd) {
             }
             else {
                 std::string message(&req[nextArgIndex]);
+                // TODO: add logic for synchronazition
+                
                 ans = bbfileWritter(bbfile, user.username, message);
             }
         }
@@ -439,6 +463,9 @@ void* do_client (int sd) {
                     std::string messageNumber = messageNumberPlusMessage.substr(0, foundSlash);
                     std::string newMessage = messageNumberPlusMessage.substr(foundSlash + 1, messageNumberPlusMessage.length()); // + 1 to skip the orignal '/'
                     if (messageNumber.length()>0 && newMessage.length()>0) {
+                        
+                        // TODO: add logic for synchronazition
+                        
                         ans = bbfileReplacer(bbfile, messageNumber, newMessage, user.username);  // replace file
                     } else {
                         ans = "REPLACE command requires a proper format to continue, Format: 'REPLACE message-number/message'";
@@ -506,13 +533,17 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
         pthread_cond_broadcast(&condition_var); // notify all threads
     pthread_mutex_unlock(&mutex);
     
-    // Closes all the master sockets  // TODO: can't close master socket, since it's blocking on the
-//     close(currentMasterSocket);
-//     shutdown(currentMasterSocket,1);
-     
+    pthread_cancel(clientServerThread);
+    pthread_cancel(slaveServerThread);
+    
+    
+    
     // TODO: wake up accept blokcing call using pipe() https://stackoverflow.com/questions/2486335/wake-up-thread-blocked-on-accept-call
     
-    
+   
+//     pthread_kill(clientServerThread, 9);
+//     pthread_kill(slaveServerThread, 9);
+//
     // closes all the connections to all the clients   // TODO: can't implement this
     
     
@@ -523,6 +554,11 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
     currentBusyThreads.clear();
     
     
+    // Closes all the master sockets  // TODO: can't close master socket, since it's blocking on the
+     close(currentMasterSocket);   // why after cancel still can't close it?
+     shutdown(currentMasterSocket,1);
+     
+
     // wait for all threasd to exit, terminates all the preallocated threads
     
     pthread_mutex_lock(&mutex);
@@ -548,38 +584,11 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
             
         loadConfigFile(); // reload the config file
         
+        pthread_create(&clientServerThread, NULL, startServer, NULL);
+        pthread_create(&slaveServerThread, NULL, startUpSlaveServer, NULL);
         
-        int port = 9000;   // port to listen to
-        try { port = std::stoi(bp); } // The clients connect to our server on port bp.
-        catch (std::invalid_argument const &e) { std::cout << "Bad input: std::invalid_argument thrown" << '\n'; }
-        catch (std::out_of_range const &e) { std::cout << "Integer overflow: std::out_of_range thrown" << '\n'; }
-        
-        const int qlen = 32;     // incoming connections queue length
-
-        // Note that the following are local variable, and thus not shared
-        // between threads; especially important for ssock and client_addr.
-
-        int msock;               // master and slave socket
-        msock = passivesocket(port,qlen);
-        if (msock < 0) {
-         perror("passivesocket");
-        }
-         printf("Server up and listening on port %d.\n", port);
-        
-        
-        //  use preallocated threads. The number of threads to be preallocated is Tmax, so that Tmax is also a limit on concurrency.
-        int preallocatThreadsNumber = 20;
-        try { preallocatThreadsNumber = std::stoi(Tmax); } // The clients connect to our server on port bp.
-        catch (std::invalid_argument const &e) { std::cout << "Bad input: std::invalid_argument thrown" << '\n'; }
-        catch (std::out_of_range const &e) { std::cout << "Integer overflow: std::out_of_range thrown" << '\n'; }
-           
-        preallocatedThreadsPool.resize(preallocatThreadsNumber); // create a threadpoOl
-        for(pthread_t &i : preallocatedThreadsPool) {
-            pthread_create(&i, NULL, threadFunctionUsedByThreadsPool, NULL);
-        }
-
-         startServer(msock);
-         
+        pthread_join(clientServerThread, NULL);
+        pthread_join(slaveServerThread, NULL);
         
     } else if (sig == SIGCHLD) {
         // TODO: handle SIGCHLD
@@ -708,3 +717,74 @@ void daemonize() {
 //    }
 //    return 0;
 //}
+
+
+void*  startUpSlaveServer(void *arg) {  // receive the message from master server
+    
+    int port = 9000;   // port to listen to
+    try { port = std::stoi(sp); } // The master server connect to our back up server on port sp.
+    catch (std::invalid_argument const &e) { std::cout << "Bad input: std::invalid_argument thrown" << '\n'; }
+    catch (std::out_of_range const &e) { std::cout << "Integer overflow: std::out_of_range thrown" << '\n'; }
+    
+    const int qlen = 32;     // incoming connections queue length
+      
+      // Note that the following are local variable, and thus not shared
+      // between threads; especially important for ssock and client_addr.
+      
+      long int msock, ssock;               // master and slave socket
+    
+      struct sockaddr_in client_addr; // the address of the client...
+      unsigned int client_addr_len = sizeof(client_addr); // ... and its length
+      
+      msock = passivesocket(port,qlen);
+      if (msock < 0) {
+          perror("passivesocket");
+          return NULL;
+      }
+      printf("back Server up and listening on port %d.\n", port);
+
+      // Setting up the thread creation:
+      pthread_t tt;                       // thread id
+      pthread_attr_t ta;                  // thread attribute, need to initialize it
+      pthread_attr_init(&ta);
+      pthread_attr_setdetachstate(&ta,PTHREAD_CREATE_DETACHED);  // usually the thread is attached with parents, that means , a child thread is never going to terminate until the parent wait for(join) it, , after it detached from the parent , the parent can not wait for it(join it), if parent exit, the child will continue exit
+      
+      while (!stopCondition) {
+          // Accept connection:
+          ssock = accept((int)msock, (struct sockaddr*)&client_addr, &client_addr_len);
+
+          if (ssock < 0) {
+              if (errno == EINTR) continue;
+              perror("accept");
+              return NULL;
+          }
+          
+          // Create thread instead of fork:
+          if ( pthread_create(&tt, NULL, (void* (*) (void*))do_syncronazation, (void*)ssock) != 0 ) {         // pthread_create takes three para, 1st address of thread id, 2nd, address of thread attribute, each thread also need a main function,function pointer,  4th para is the para for the function, (void*) is casted as a void pointer
+              perror("pthread_create");
+              return NULL;
+          }
+          // main thread continues with the loop...
+      }
+    
+    return NULL;
+    
+}
+
+void* do_syncronazation (int sd) {
+    
+    // TODO: logic for synchronazition
+    
+    // do interraction with sd !
+    // send (sd, messages...)
+    
+    
+    return NULL;
+}
+
+
+
+
+
+
+// TODO: add another function twoPhaseCommitHandler () {} used when the client sends write or replace commands
