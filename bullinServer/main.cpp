@@ -123,86 +123,129 @@ int main(int argc, char** argv) {
     }
     
     // Retrieve the options:
-    std::string peersString = ""; // use a string to append/take all the values from argv[optind] , and then after the while loop take everything into the config file
-    while (optind < argc) {
-        if ( (option = getopt(argc, argv, "b:c:T:t:p:s:fdh")) != -1 ) {  // for each option...
-            switch ( option ) {
-                case 'b':  // change bbfile name
-                    std::rename(bbfile.c_str(), optarg);
-                    configFileHandler -> configFileModifier(configFileName,"BBFILE",optarg); // insert the new name inside the config file
-                    bbfile = optarg;
-                    break;
-                case 'c':  // change config file name
-                    std::rename(configFileName.c_str(), optarg);
-                    configFileName = optarg; // TODO: VERIFY THIS with the signalhug part again insert the new value into this configFile variable so that when reload it will use the new name
-                    break;
-                case 'T':  // overide Tmax number, preallocated threads
+    // handle switch arguments
+    while ( (option = getopt(argc, argv, "b:c:T:t:p:s:fdh")) != -1 ) {  // for each option...
+        switch ( option ) {
+            case 'b':  // change bbfile name
+                std::rename(bbfile.c_str(), optarg);
+                configFileHandler -> configFileModifier(configFileName,"BBFILE",optarg); // insert the new name inside the config file
+                bbfile = optarg;
+                break;
+            case 'c':  // change config file name
+                std::rename(configFileName.c_str(), optarg);
+                configFileName = optarg; // TODO: VERIFY THIS with the signalhug part again insert the new value into this configFile variable so that when reload it will use the new name
+                break;
+            case 'T': { // overide Tmax number, preallocated threads
+                std::string switchValue = optarg;
+                std::string::const_iterator itForTRaw = switchValue.begin();
+                while (itForTRaw != switchValue.end() && std::isdigit(*itForTRaw)) {++itForTRaw;}
+                if(!switchValue.empty() && itForTRaw == switchValue.end()) { // check all the ports are digits
                     configFileHandler -> configFileModifier(configFileName,"THMAX",optarg);
                     Tmax = optarg;
                     break;
-                case 't':  // overide Tmax number, preallocated threads
+                } else {
+                   std::cerr << "switch argument T are not in the correct format and the thread number should be all in digits, format :  '-T threadsNumber'" << std::endl;
+                   std::exit(-1);
+                }
+                break;
+            }
+            case 't': { // overide Tmax number, preallocated threads
+                std::string switchValue = optarg;
+                std::string::const_iterator itForTRaw = switchValue.begin();
+                while (itForTRaw != switchValue.end() && std::isdigit(*itForTRaw)) {++itForTRaw;}
+                if(!switchValue.empty() && itForTRaw == switchValue.end()) { // check all the ports are digits
                     configFileHandler -> configFileModifier(configFileName,"THMAX",optarg);
                     Tmax = optarg;
                     break;
-                case 'p':  // client server port number
+                } else {
+                   std::cerr << "switch argument t are not in the correct format and the thread number should be all in digits, format :  '-t threadsNumber'" << std::endl;
+                   std::exit(-1);
+                }
+                break;
+            }
+            case 'p': { // client server port number
+                std::string switchValue = optarg;
+                std::string::const_iterator itForPortRaw = switchValue.begin();
+                while (itForPortRaw != switchValue.end() && std::isdigit(*itForPortRaw)) {++itForPortRaw;}
+                if(!switchValue.empty() && itForPortRaw == switchValue.end()) { // check all the ports are digits
                     configFileHandler -> configFileModifier(configFileName,"BBPORT",optarg);
                     bp = optarg;
                     break;
-                case 's': // server port number
+                } else {
+                   std::cerr << "switch argument p are not in the correct format and the port number should be all in digits, format :  '-p portNumber'" << std::endl;
+                   std::exit(-1);
+                }
+                break;
+            }
+            case 's': {// server port number
+                std::string switchValue = optarg;
+                std::string::const_iterator itForPortRaw = switchValue.begin();
+                while (itForPortRaw != switchValue.end() && std::isdigit(*itForPortRaw)) {++itForPortRaw;}
+                if(!switchValue.empty() && itForPortRaw == switchValue.end()) { // check all the ports are digits
                     configFileHandler -> configFileModifier(configFileName,"SYNCPORT",optarg);
                     sp = optarg;
                     break;
-                case 'f':   // start daemon...
-                    configFileHandler -> configFileModifier(configFileName,"DAEMON","false");
-                    d = false;
-                    break;
-                case 'd':   // debug mode...
-                    configFileHandler -> configFileModifier(configFileName,"DEBUG","true");
-                    D = true;
-                    break;
-                case '?':  // unknown option...
-                        std::cerr << "Unknown option: '" << char(optopt) << "'!" << std::endl;
-                    exit(0);
-                    break;
-                case 'h':  // help menu
-                    printhelpFunction();
-                    exit(0);
-                default:
-                    
-                    break;
+                } else {
+                   std::cerr << "switch argument s are not in the correct format and the port number should be all in digits, format :  '-s portNumber'" << std::endl;
+                   std::exit(-1);
+                }
+                break;
             }
-        } else {
+            case 'f':   // start daemon...
+                configFileHandler -> configFileModifier(configFileName,"DAEMON","false");
+                d = false;
+                break;
+            case 'd':   // debug mode...
+                configFileHandler -> configFileModifier(configFileName,"DEBUG","true");
+                D = true;
+                break;
+            case '?':  // unknown option...
+                    std::cerr << "Unknown option: '" << char(optopt) << "'!" << std::endl;
+                exit(0);
+                break;
+            case 'h':  // help menu
+                printhelpFunction();
+                exit(0);
+            default:
+                
+                break;
+        }
+    }
+ 
             
-            if (strcmp(argv[optind], "") != 0) {
-                std::string peerStringRaw = argv[optind];
-                size_t found  = peerStringRaw.find(":");
-                peersHostNPortMap.clear(); // clean the value from last time use the latest value from command line
-                // check if the non-switch argument are not meet the requirements of host:port, we need to exits
-                if (found != std::string::npos) { // check the host and port are in the correct format
-                    std::string domainRaw = peerStringRaw.substr(0, found); // check if host is valide
-                    struct hostent *h;
-                    if ((h=gethostbyname(domainRaw.c_str())) == NULL) {
+    // handle non switch arguments
+    std::string peersString = ""; // use a string to append/take all the values from argv[i] , and then after the while loop take everything into the config file
+    argc -= optind - 1;
+    argv += optind - 1;
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "") != 0) {
+            std::string peerStringRaw = argv[i];
+            size_t found  = peerStringRaw.find(":");
+            peersHostNPortMap.clear(); // clean the value from last time use the latest value from command line
+            // check if the non-switch argument are not meet the requirements of host:port, we need to exits
+            if (found != std::string::npos) { // check the host and port are in the correct format
+                std::string domainRaw = peerStringRaw.substr(0, found); // check if host is valide
+                struct hostent *h;
+                if ((h=gethostbyname(domainRaw.c_str())) == NULL) {
                     std::cerr << "non-switch argument are not in the correct format and the host supplied is not available, format :  'host:port host:post host:post...' " << std::endl;
                     std::exit(-1);
-                    }
-                    // check the port is valid
-                    std::string portRaw = peerStringRaw.substr(found+1, peerStringRaw.length());
-                    std::string::const_iterator itForPortRaw = portRaw.begin();
-                    while (itForPortRaw != portRaw.end() && std::isdigit(*itForPortRaw)) ++itForPortRaw;
-                    if(!portRaw.empty() && itForPortRaw == portRaw.end()) { // check all the ports are digits
-                        peersHostNPortMap.insert({domainRaw,stoi(portRaw)}); // update the map in the global variable for later uses
-                        // use a string to append/take all the values from argv[optind] , and then after the while loop take everything into the config file
-                        peersString = peersString + argv[optind] + " "; // update peerString for recoring in the config file
-                    } else {
-                        std::cerr << "non-switch argument are not in the correct format and the prot number should be all in digits, format :  'host:port host:post host:post...'" << std::endl;
-                        std::exit(-1);
-                    }
-                } else {
-                    std::cerr << "non-switch argument are not in the correct format, format :  'host:port host:post host:post...'" << std::endl;
-                    exit(0);
                 }
+                // check the port is valid
+                std::string portRaw = peerStringRaw.substr(found+1, peerStringRaw.length());
+                std::string::const_iterator itForPortRaw = portRaw.begin();
+                while (itForPortRaw != portRaw.end() && std::isdigit(*itForPortRaw)) {++itForPortRaw;}
+                if(!portRaw.empty() && itForPortRaw == portRaw.end()) { // check all the ports are digits
+                    peersHostNPortMap.insert({domainRaw,stoi(portRaw)}); // update the map in the global variable for later uses
+                    // use a string to append/take all the values from argv[i] , and then after the while loop take everything into the config file
+                    peersString = peersString + argv[i] + " "; // update peerString for recoring in the config file
+                } else {
+                    std::cerr << "non-switch argument are not in the correct format and the port number should be all in digits, format :  'host:port host:post host:post...'" << std::endl;
+                    std::exit(-1);
+                }
+            } else {
+                std::cerr << "non-switch argument are not in the correct format, format :  'host:port host:post host:post...'" << std::endl;
+                exit(0);
             }
-            optind++;
         }
     }
     
@@ -398,9 +441,7 @@ void* do_client (int sd) {
             printf("Received quit, sending EOF.\n");
             shutdown(sd,1);
             close(sd);
-            std::cout << " ======do_client==  用自己线程挂你比就能返回正常值=="<<  close(sd) << "===="<<        shutdown(sd,1) << std::endl;
-
-
+            
             printf("Outgoing client...\n");
             // monitor code begins
 //            pthread_mutex_lock(&mon.mutex);
