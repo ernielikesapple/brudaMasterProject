@@ -102,7 +102,7 @@ pthread_t slaveServerThread;  // server to server communication
 void*  startUpSlaveServer(void *arg);
 void* do_syncronazation (int sd);
 
-void connectToAllthePeersForSyncronazation ();
+int connectToAllthePeersForSyncronazation (std::string messageNumber, std::string message, std::string poster);  // return 0 means twoPhaseCommit fail, 1 means two phase all success, TODO: add function parameter accordingly
 
 
 int main(int argc, char** argv) {
@@ -512,9 +512,26 @@ void* do_client (int sd) {
             }
             else {
                 std::string message(&req[nextArgIndex]);
-                // TODO: add logic for synchronazition
-                connectToAllthePeersForSyncronazation();
-                ans = bbfileWritter(bbfile, user.username, message);
+                
+                
+                
+                // logic for peers Synchronization
+
+                if (peersHostNPortVector.size() > 0) { // only wrote success, and there are peers , we will try to do the synchronizaiton,  after the sync process, if two phase commit fail, then update the ans message to the client, other wise remains the same
+                     // TODO: add logic for synchronazition
+                    int result = connectToAllthePeersForSyncronazation("", message, user.username);  // pass necessary message to
+                    if (result == 0) {  //
+                        ans = "ERROR WRITE can not sync all the message from client, due to the peers server synchronization error";
+                    } else { // peers synchronization success, we perform the operation on the master server too
+                        ans = bbfileWritter(bbfile, user.username, message);
+                    }
+                } else { // there is no peers specified in the config file or command line, we only perform one client one server operation
+                    ans = bbfileWritter(bbfile, user.username, message);
+                }
+                
+                
+                
+                
             }
         }
         
@@ -531,9 +548,29 @@ void* do_client (int sd) {
                     std::string newMessage = messageNumberPlusMessage.substr(foundSlash + 1, messageNumberPlusMessage.length()); // + 1 to skip the orignal '/'
                     if (messageNumber.length()>0 && newMessage.length()>0) {
                         
+                        
+                        
+                        
                         // TODO: add logic for synchronazition
-                        connectToAllthePeersForSyncronazation();
-                        ans = bbfileReplacer(bbfile, messageNumber, newMessage, user.username);  // replace file
+                        
+                        // logic for peers Synchronization
+
+                        
+                        if (peersHostNPortVector.size() > 0) { // only wrote success, and there are peers , we will try to do the synchronizaiton,  after the sync process, if two phase commit fail, then update the ans message to the client, other wise remains the same
+                             // TODO: add logic for synchronazition
+                            int result = connectToAllthePeersForSyncronazation(messageNumber, newMessage, user.username);  // pass necessary message to
+                            if (result == 0) {  //
+                                ans = "ERROR WRITE can not sync all the message from client, due to the peers server synchronization error";
+                            } else { // peers synchronization success, we perform the operation on the master server too
+                                ans = bbfileReplacer(bbfile, messageNumber, newMessage, user.username);  // replace file
+                            }
+                        } else { // there is no peers specified in the config file or command line, we only perform one client one server operation
+                                ans = bbfileReplacer(bbfile, messageNumber, newMessage, user.username);  // replace file
+                        }
+                        
+                        
+                        
+            
                     } else {
                         ans = "REPLACE command requires a proper format to continue, Format: 'REPLACE message-number/message'";
                     }
@@ -692,31 +729,33 @@ void loadConfigFile() {
 
                 if ((currentChar == ' '&& nextChar != ' ') || (itForPeers - peers.begin() == (peers.length()-1))) { // skip all the space between host:port host port, or there is only one host port
                     std::string peerStringRaw = peers.substr(theBeginningIndexOfAHostNPort, (index-theBeginningIndexOfAHostNPort + 1)); // notice the send parameter means the length
-                    theBeginningIndexOfAHostNPort = index + 1;  // the index after the last host:port + space
-                    
-                    peerStringRaw.erase(std::remove_if(peerStringRaw.begin(), peerStringRaw.end(), ::isspace),peerStringRaw.end()); // remove the white space
-                    
-                    size_t found  = peerStringRaw.find(":");
-                    if (found != std::string::npos) { // check the host and port are in the correct format
-                        std::string domainRaw = peerStringRaw.substr(0, found); // check if host is valide
-                        struct hostent *h;
-                        if ((h=gethostbyname(domainRaw.c_str())) == NULL) {
-
-                            std::cerr << "warning: peers in the config file are not in the correct format and the host supplied is not available, format :  'peers=host:port host:post host:post...' " << std::endl;
-                            break;
-                        }
-                        // check the port is valid
-                        std::string portRaw = peerStringRaw.substr(found+1, peerStringRaw.length());
-                        std::string::const_iterator itForPortRaw = portRaw.begin();
-                        while (itForPortRaw != portRaw.end() && std::isdigit(*itForPortRaw)) ++itForPortRaw;
-                        if(!portRaw.empty() && itForPortRaw == portRaw.end()) {
-                            peersHostNPortVector.push_back(make_pair(domainRaw,stoi(portRaw)));
-                        } else {
-                            std::cerr << "warning: peers in the config file are not in the correct format and the port number should be all in digits, format :  'peers=host:port host:post host:post...' " << std::endl;
-                        }
+                    if(peerStringRaw.find_first_not_of(' ') != std::string::npos) { // remove the white space before first host:post                        
+                        theBeginningIndexOfAHostNPort = index + 1;  // the index after the last host:port + space
                         
-                    } else {
-                        std::cerr << "warning: peers in the config file are not in the correct format, format :  'peers=host:port host:post host:post...' " << std::endl;
+                        peerStringRaw.erase(std::remove_if(peerStringRaw.begin(), peerStringRaw.end(), ::isspace),peerStringRaw.end()); // remove the white space
+                        
+                        size_t found  = peerStringRaw.find(":");
+                        if (found != std::string::npos) { // check the host and port are in the correct format
+                            std::string domainRaw = peerStringRaw.substr(0, found); // check if host is valide
+                            struct hostent *h;
+                            if ((h=gethostbyname(domainRaw.c_str())) == NULL) {
+
+                                std::cerr << "warning: peers in the config file are not in the correct format and the host supplied is not available, format :  'peers=host:port host:post host:post...' " << std::endl;
+                                break;
+                            }
+                            // check the port is valid
+                            std::string portRaw = peerStringRaw.substr(found+1, peerStringRaw.length());
+                            std::string::const_iterator itForPortRaw = portRaw.begin();
+                            while (itForPortRaw != portRaw.end() && std::isdigit(*itForPortRaw)) ++itForPortRaw;
+                            if(!portRaw.empty() && itForPortRaw == portRaw.end()) {
+                                peersHostNPortVector.push_back(make_pair(domainRaw,stoi(portRaw)));
+                            } else {
+                                std::cerr << "warning: peers in the config file are not in the correct format and the port number should be all in digits, format :  'peers=host:port host:post host:post...' " << std::endl;
+                            }
+                            
+                        } else {
+                            std::cerr << "warning: peers in the config file are not in the correct format, format :  'peers=host:port host:post host:post...' " << std::endl;
+                        }
                     }
                 }
                 itForPeers++;
@@ -890,7 +929,8 @@ void* do_syncronazation (int sd) {
     
     // do interraction with sd !
     // send (sd, messages...)
-    
+    std::cout << "will do sync here= =" <<std:: endl;
+
     
     return NULL;
 }
@@ -901,16 +941,33 @@ void* do_syncronazation (int sd) {
 
 
 // TODO: add another function twoPhaseCommitHandler () {} used when the client sends write or replace commands
-void connectToAllthePeersForSyncronazation () {
+int connectToAllthePeersForSyncronazation (std::string messageNumber, std::string message, std::string poster) {  //
+    
+    std::vector<std::pair<int, bool> > peersSocketDescriptorNOnlinestatus;
     
     for (auto& it : peersHostNPortVector) { // clean up the thread which is blocked on read()
         std::string host = it.first;
-        int port = it.second;
-        std::cout << "host is : = =" << host << "port is : ==" << port <<std:: endl;
+        std::string s = std::to_string(it.second);
+        char const *port = s.c_str();
         
+        int sd = connectbyport(host.c_str(),port);   // host and port number
+        if (sd == err_host) {
+           fprintf(stderr, "Cannot find host %s.\n", host.c_str());
+           return 0;
+        }
+        if (sd < 0) {
+           perror("connectbyport");
+           return 0;
+        }
     }
     
+    while (!stopCondition) {
+        
+        
+        std::cout << "do two phase commit here= =" <<std:: endl;
+        
+        return 1;
+    }
   
-    
-    
+    return 0;
 }
