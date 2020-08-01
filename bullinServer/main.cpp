@@ -15,6 +15,7 @@
 #include <signal.h>
 #include <queue>
 #include <list>
+#include <vector>
 #include <atomic>
 #include "TcpUtils.hpp"
 #include "ConfigFileHandler.hpp"
@@ -26,7 +27,7 @@ std::string bp = "9000";   // keyValue in the config file: BBPORT , port number 
 std::string sp = "10000";  // keyValue in the config file: SYNCPORT,  port number for server server communication
 std::string bbfile = "bbfile";   // keyValue in the config file: BBFILE               // config fileName mandatory data if it's empty then refuse to start the server,
 std::string peers = "";    // keyValue in the config file: PEERS // TODO: to verify the value inside the server function make sure it has value
-std::map<std::string, int> peersHostNPortMap;
+std::vector<std::pair<std::string, int> > peersHostNPortVector;
 bool d = true;   // keyValue in the config file: DAEMON
 bool D = false; // keyValue in the config file: DEBUG
 
@@ -101,6 +102,7 @@ pthread_t slaveServerThread;  // server to server communication
 void*  startUpSlaveServer(void *arg);
 void* do_syncronazation (int sd);
 
+void connectToAllthePeersForSyncronazation ();
 
 
 int main(int argc, char** argv) {
@@ -221,7 +223,7 @@ int main(int argc, char** argv) {
         if (strcmp(argv[i], "") != 0) {
             std::string peerStringRaw = argv[i];
             size_t found  = peerStringRaw.find(":");
-            peersHostNPortMap.clear(); // clean the value from last time use the latest value from command line
+            peersHostNPortVector.clear(); // clean the value from last time use the latest value from command line
             // check if the non-switch argument are not meet the requirements of host:port, we need to exits
             if (found != std::string::npos) { // check the host and port are in the correct format
                 std::string domainRaw = peerStringRaw.substr(0, found); // check if host is valide
@@ -235,7 +237,7 @@ int main(int argc, char** argv) {
                 std::string::const_iterator itForPortRaw = portRaw.begin();
                 while (itForPortRaw != portRaw.end() && std::isdigit(*itForPortRaw)) {++itForPortRaw;}
                 if(!portRaw.empty() && itForPortRaw == portRaw.end()) { // check all the ports are digits
-                    peersHostNPortMap.insert({domainRaw,stoi(portRaw)}); // update the map in the global variable for later uses
+                    peersHostNPortVector.push_back(make_pair(domainRaw,stoi(portRaw))); // update the vector in the global variable for later uses
                     // use a string to append/take all the values from argv[i] , and then after the while loop take everything into the config file
                     peersString = peersString + argv[i] + " "; // update peerString for recoring in the config file
                 } else {
@@ -511,7 +513,7 @@ void* do_client (int sd) {
             else {
                 std::string message(&req[nextArgIndex]);
                 // TODO: add logic for synchronazition
-                
+                connectToAllthePeersForSyncronazation();
                 ans = bbfileWritter(bbfile, user.username, message);
             }
         }
@@ -530,7 +532,7 @@ void* do_client (int sd) {
                     if (messageNumber.length()>0 && newMessage.length()>0) {
                         
                         // TODO: add logic for synchronazition
-                        
+                        connectToAllthePeersForSyncronazation();
                         ans = bbfileReplacer(bbfile, messageNumber, newMessage, user.username);  // replace file
                     } else {
                         ans = "REPLACE command requires a proper format to continue, Format: 'REPLACE message-number/message'";
@@ -679,11 +681,13 @@ void loadConfigFile() {
 
         if (strcmp(peers.c_str(), "") != 0) {  // check the peers are all in the valide format and to verify the value inside the server function make sure it has value
             std::string::iterator itForPeers = peers.begin();
-            peersHostNPortMap.clear(); // clean the value from last time use the latest value from config file
+            peersHostNPortVector.clear(); // clean the value from last time use the latest value from config file
             size_t theBeginningIndexOfAHostNPort = 0;
             while (itForPeers != peers.end()) {
                 const char currentChar = *itForPeers;
+
                 auto index = std::distance(peers.begin(), itForPeers); // get the current index of the iterator
+
                 const char nextChar = *(itForPeers+1);
 
                 if ((currentChar == ' '&& nextChar != ' ') || (itForPeers - peers.begin() == (peers.length()-1))) { // skip all the space between host:port host port, or there is only one host port
@@ -706,7 +710,7 @@ void loadConfigFile() {
                         std::string::const_iterator itForPortRaw = portRaw.begin();
                         while (itForPortRaw != portRaw.end() && std::isdigit(*itForPortRaw)) ++itForPortRaw;
                         if(!portRaw.empty() && itForPortRaw == portRaw.end()) {
-                            peersHostNPortMap.insert({domainRaw,stoi(portRaw)});
+                            peersHostNPortVector.push_back(make_pair(domainRaw,stoi(portRaw)));
                         } else {
                             std::cerr << "warning: peers in the config file are not in the correct format and the port number should be all in digits, format :  'peers=host:port host:post host:post...' " << std::endl;
                         }
@@ -897,3 +901,16 @@ void* do_syncronazation (int sd) {
 
 
 // TODO: add another function twoPhaseCommitHandler () {} used when the client sends write or replace commands
+void connectToAllthePeersForSyncronazation () {
+    
+    for (auto& it : peersHostNPortVector) { // clean up the thread which is blocked on read()
+        std::string host = it.first;
+        int port = it.second;
+        std::cout << "host is : = =" << host << "port is : ==" << port <<std:: endl;
+        
+    }
+    
+  
+    
+    
+}
