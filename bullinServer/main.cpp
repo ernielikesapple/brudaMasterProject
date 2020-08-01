@@ -687,8 +687,8 @@ void loadConfigFile() {
                 const char nextChar = *(itForPeers+1);
 
                 if ((currentChar == ' '&& nextChar != ' ') || (itForPeers - peers.begin() == (peers.length()-1))) { // skip all the space between host:port host port, or there is only one host port
-                    std::string peerStringRaw = peers.substr(theBeginningIndexOfAHostNPort, index);
-                    theBeginningIndexOfAHostNPort = index;  // the index after the last host:port + space
+                    std::string peerStringRaw = peers.substr(theBeginningIndexOfAHostNPort, (index-theBeginningIndexOfAHostNPort + 1)); // notice the send parameter means the length
+                    theBeginningIndexOfAHostNPort = index + 1;  // the index after the last host:port + space
                     
                     peerStringRaw.erase(std::remove_if(peerStringRaw.begin(), peerStringRaw.end(), ::isspace),peerStringRaw.end()); // remove the white space
                     
