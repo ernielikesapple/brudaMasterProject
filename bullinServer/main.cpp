@@ -436,6 +436,10 @@ void* do_client (int sd) {
         if ( n > 1 && req[n-1] == '\r' )
             req[n-1] = '\0';
         
+        if ( strncasecmp(req,"",strlen("")) == 0 ) {  // handle return
+            ans = "";
+        }
+        
         if ( strncasecmp(req,"QUIT",strlen("QUIT")) == 0 ) {  // The strncasecmp() function is similar, except it only compares the first n bytes of req.
             
             send(sd,"BYE see you next time\r\n", strlen("BYE see you next time\r\n"),0);
@@ -924,17 +928,27 @@ void*  startUpSlaveServer(void *arg) {  // receive the message from master serve
 }
 
 void* do_syncronazation (int sd) {
+    while (!stopCondition) {
+        // TODO: logic for synchronazition
+        char precommitMessage[256];  // precommitMessage from master server
+        bzero(precommitMessage, 256);
+        int precommitMessageStatus = (int)read(sd, precommitMessage, sizeof(precommitMessage)); // the receive status of first message
+        std::cout << "message from master server " << precommitMessage << std::endl;
+        
+        try {
+            send(sd, "READY", 256, 0);
+        } catch(const std::system_error& e) {
+            send(sd, "ABORT", 256, 0);
+            std::cout << "Caught system_error with code " << e.code()
+                      << " meaning " << e.what() << '\n';
+            return NULL;
+        }
+    }
     
-    // TODO: logic for synchronazition
-    
-    // do interraction with sd !
-    // send (sd, messages...)
-    std::cout << "will do sync here= =" <<std:: endl;
-
+    close(sd);
     
     return NULL;
 }
-
 
 
 
@@ -959,12 +973,55 @@ int connectToAllthePeersForSyncronazation (std::string messageNumber, std::strin
            perror("connectbyport");
            return 0;
         }
+        
+        peersSocketDescriptorNOnlinestatus.push_back(std::make_pair(sd,true));
     }
     
     while (!stopCondition) {
         
         
-        std::cout << "do two phase commit here= =" <<std:: endl;
+        for (auto& it : peersSocketDescriptorNOnlinestatus) {  // send pre-commit message to each online peer
+            if (it.second == true) { // means the peer server is online
+                send(it.first, "VOTE", 256, 0);
+                it.second = false; // set back to init value
+            }
+        }
+        
+        
+        //Recieve status reply from the backend servers
+        struct timeval timeout;
+        timeout.tv_sec = 3;
+        timeout.tv_usec = 0;
+        
+        char buffer1[256];
+        int count = 0;
+        int abcount = 0;
+        
+        for (auto& it : peersSocketDescriptorNOnlinestatus) {  // send pre-commit message to each online peer
+            if (setsockopt(it.first, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
+            {
+                std::cout << "Timeout error" << std::endl;
+                return 0;
+            }
+            while (recv(it.first, buffer1, 256, 0) > 0)
+            {
+                if (strcmp(buffer1, "ABORT") == 0)
+                {
+
+                    abcount++;
+                }
+                count++;
+                it.second = true;
+            }
+        }
+        
+        // test code:
+        
+        for (auto& it : peersSocketDescriptorNOnlinestatus) {  // send pre-commit message to each online peer
+            if (it.second == true) { // means the peer server is online
+                std::cout << " 应该是2次" << std::endl;
+            }
+        }
         
         return 1;
     }

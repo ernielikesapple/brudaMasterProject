@@ -1,5 +1,8 @@
 Notice:
-if on the bbserv.log or terminal keep getting "accept: Bad file descriptor" error, use "lsof -nPi | grep LISTEN" command to check the current listenning port,
+1. Please pay attention to the format of bbfilec.conf, specify value only in one line!!! strictly followed rule
+2. When testing the phase two, the sync orocess maybe a bit slow, especially if there are big list of peers, on the client side you can push return button on the keyboard mutilple times to refresh the status 
+
+2.if on the bbserv.log or terminal keep getting "accept: Bad file descriptor" error, use "lsof -nPi | grep LISTEN" command to check the current listenning port,
 kill the process current using the same port!!!!
 
 
