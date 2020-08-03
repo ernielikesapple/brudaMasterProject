@@ -207,7 +207,7 @@ const int err_listen  = -6;
     std::string bbfileReader (std::string filename, std::string messageNumber);
     std::string bbfileWritter (std::string filename, std::string poster, std::string message);
     std::string bbfileReplacer (std::string filename, std::string messageNumber, std::string newMessage, std::string newPoster);
-
+    std::string bbfileWritterUsedWhenSynChronization (std::string filename, std::string messageNumber, std::string poster, std::string message);
 
     /*
      * Invalid descriptor error value.

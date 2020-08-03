@@ -499,6 +499,76 @@ std::string bbfileReplacer (std::string filename, std::string messageNumber, std
     return returnString;
 }
 
+
+
+
+std::string bbfileWritterUsedWhenSynChronization (std::string filename, std::string messageNumber, std::string poster, std::string message) {
+    // notice don't return before hit the lines of code with mutex
+    std::string returnString = "";
+    
+    // The fact that only one thread writes at any given time is ensured
+    // by the fact that the successful thread does not release the mutex
+    // until the writing process is done.
+    pthread_mutex_lock(&flocks.mutex);
+    // we wait for condition as long as somebody is doing things with
+    // the file
+
+    while (flocks.reads != 0) {
+        // release the mutex while waiting...
+        pthread_cond_wait(&flocks.can_write, &flocks.mutex);
+    }
+    // now we have the mutex _and_ the condition, so we write
+    std::fstream bbFile;
+    bbFile.open(filename.c_str(),std::ios::in | std::ofstream::app);
+    if (bbFile.fail()) {
+        // done writing.
+        // this might have released the file for access, so we broadcast the
+        // condition to unlock whatever process happens to wait for us.
+        pthread_cond_broadcast(&flocks.can_write);
+        // we are done!
+        pthread_mutex_unlock(&flocks.mutex);
+        return "ERROR WRITE can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
+    }
+    
+    if (D) { // debug stand out put for testing access control
+        std::string logMessage = "beginning to write message \n";
+        logger(&logMessage[0]);
+    }
+    
+    bbFile << messageNumber << "/" << poster << "/" << message << std::endl;
+    returnString = "WROTE " + messageNumber;
+    
+    if (D) { /* DEBUG_DELAY */
+        // ******************** TEST CODE ********************
+        // bring the write process to a crawl to figure out whether we
+        // implement the concurrent access correctly.
+        std::string logMessage = "debug write delay 6 seconds begins \n";
+        logger(&logMessage[0]);
+        sleep(6);
+        std::string logMessage2 = "debug write delay 6 seconds ends \n";
+        logger(&logMessage2[0]);
+        // ******************** TEST CODE DONE ***************
+    }
+    
+    bbFile.close();
+    // done writing.
+    // this might have released the file for access, so we broadcast the
+    // condition to unlock whatever process happens to wait for us.
+
+    pthread_cond_broadcast(&flocks.can_write);
+    // we are done!
+    pthread_mutex_unlock(&flocks.mutex);
+
+    if (D) { // debug stand out put for testing access control
+       std::string logMessage = "end to write message \n";
+       logger(&logMessage[0]);
+    }
+       
+    return returnString;
+}
+
+
+
 TcpUtils* TcpUtils::singleton = NUll_POINTER;
 TcpUtils* TcpUtils::newAInstance() {
     if (singleton == NUll_POINTER) {
