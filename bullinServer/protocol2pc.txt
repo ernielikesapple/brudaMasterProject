@@ -1,6 +1,8 @@
 1.1 Master Server and Peers Slave server Protocol
 Below is a description of the basic application protocol i.e., of the message send by the master server as well as the answers returned by the slave peer server Every command and response consists of a single line of text. The server should handle any combination of the characters ’\n’ and ’\r’ as line terminator and should send back responses terminated by a single ’\n’.
 
+
+Precommit Stage:
 VOTE
 At the beginning of the interaction the master server send the above text(as pre commit message) to the peers slave servers that just connected.
     
@@ -8,7 +10,16 @@ At the beginning of the interaction the master server send the above text(as pre
     This message is postive acknowledgment returned by the slave server. When master server receive all the ready status, the master server will go to next stage.
     ABORT
     This message is negative acknowledgment returned by the slave server. When master server receive one of the abort status, the master server will not go to next stage, it will broadcast this negative status to all the slave servers.
+
+
+Commit Stage:
+Commit messages.
+
     
+    commit success
+    This message is postive acknowledgment returned by the slave server. When master server receive all the success status, the master server do the write or replace operation and all slave server will do the replace or write operation too.
+    ABORT
+    This message is negative acknowledgment returned by the slave server. When master server receive one of the abort status, the master server will not go to next stage, it will broadcast this negative status to all the slave servers. Let those slave server who did the write or replace operation undo them.
 
     
     
