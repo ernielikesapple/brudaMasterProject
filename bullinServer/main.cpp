@@ -933,16 +933,73 @@ void* do_syncronazation (int sd) {
         char precommitMessage[256];  // precommitMessage from master server
         bzero(precommitMessage, 256);
         int precommitMessageStatus = (int)read(sd, precommitMessage, sizeof(precommitMessage)); // the receive status of first message
-        std::cout << "message from master server " << precommitMessage << std::endl;
+        if (D) {
+            char msg[256];
+            snprintf(msg, 256, "Precommit phase: slave server receives:  %s from master server \n", precommitMessage);
+            logger(msg);
+        }
         
         try {
-            send(sd, "READY", 256, 0);
+            if (precommitMessageStatus != 0) {
+                send(sd, "READY", 256, 0);
+                if (D) {
+                    std::string logMessage = "Precommit phase: slave server sends 'Ready' to master Server \n";
+                    logger(&logMessage[0]);
+                }
+            }
         } catch(const std::system_error& e) {
             send(sd, "ABORT", 256, 0);
+            if (D) {
+                std::string logMessage = "Precommit phase: slave server sends 'ABORT' to master Server \n";
+                logger(&logMessage[0]);
+            }
             std::cout << "Caught system_error with code " << e.code()
                       << " meaning " << e.what() << '\n';
             return NULL;
         }
+        
+        
+        char commitMessages[256];
+        read(sd, commitMessages, sizeof(commitMessages));  // read receiveCommitStatus
+        if (D) {
+           char msg[256];
+           snprintf(msg, 256, "Commit phase: slave server receives commit messages:  %s from master server \n", commitMessages);
+           logger(msg);
+        }
+
+        if ((strcmp(commitMessages, "ABORT")) == 0) {
+            return NULL;
+        }
+        else if ((strcmp(commitMessages, "ABORT")) != 0) {
+
+            int i;
+            std::string commitMessagesStr = "";
+            for (i = 0; i < sizeof(commitMessages); i++) {  // convert char[] to string
+                commitMessagesStr = commitMessagesStr + commitMessages[i];
+            }
+            
+            std::cout << "receive ===" << commitMessagesStr << std::endl;
+            
+            // store commit messages
+            if (2 > 1 ) { // store success
+                send(sd, "commit Sucess", 256, 0);
+            } else {
+                send(sd, "ABORT", 256, 0);
+            }
+        }
+        
+        
+        
+        
+        // read all the commit messages if ok return NULL, if not abondan the previous write/replace operation
+
+        
+        
+        
+        return NULL;
+        
+        
+        
     }
     
     close(sd);
@@ -983,6 +1040,10 @@ int connectToAllthePeersForSyncronazation (std::string messageNumber, std::strin
         for (auto& it : peersSocketDescriptorNOnlinestatus) {  // send pre-commit message to each online peer
             if (it.second == true) { // means the peer server is online
                 send(it.first, "VOTE", 256, 0);
+                if (D) {
+                    std::string logMessage = "Precommit phase: master server sends VOTE, as pre-commit message to collect all the peers slave server status \n";
+                    logger(&logMessage[0]);
+                }
                 it.second = false; // set back to init value
             }
         }
@@ -993,35 +1054,100 @@ int connectToAllthePeersForSyncronazation (std::string messageNumber, std::strin
         timeout.tv_sec = 3;
         timeout.tv_usec = 0;
         
-        char buffer1[256];
-        int count = 0;
-        int abcount = 0;
-        
+        char preCommitResponse[256];
+        int onlinePeersServerCount = 0;
+        int abortedCount = 0;
         for (auto& it : peersSocketDescriptorNOnlinestatus) {  // send pre-commit message to each online peer
             if (setsockopt(it.first, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
             {
                 std::cout << "Timeout error" << std::endl;
                 return 0;
             }
-            while (recv(it.first, buffer1, 256, 0) > 0)
-            {
-                if (strcmp(buffer1, "ABORT") == 0)
-                {
-
-                    abcount++;
+            while (recv(it.first, preCommitResponse, sizeof(preCommitResponse), 0) > 0) {
+                if (D) {
+                    char msg[256];
+                    snprintf(msg, 256, "Precommit phase: master server receives the pre-commit message responses: %s from the peers slave server status \n", preCommitResponse);
+                    logger(msg);
                 }
-                count++;
+                
+                if (strcmp(preCommitResponse, "ABORT") == 0) {
+                    abortedCount++;
+                }
+
+                onlinePeersServerCount++;
                 it.second = true;
             }
         }
         
-        // test code:
-        
-        for (auto& it : peersSocketDescriptorNOnlinestatus) {  // send pre-commit message to each online peer
-            if (it.second == true) { // means the peer server is online
-                std::cout << " 应该是2次" << std::endl;
+        if (abortedCount > 0) { // there is at least one server is aborted
+            char arr[] = "ABORT";
+            for (auto& it : peersSocketDescriptorNOnlinestatus) {  // broadcast abort messages to all the peers
+                send(it.first, arr, sizeof(arr), 0);
+                if (D) {
+                    std::string logMessage = "Precommit phase: master server broadcast the ABORT message to all the peers slave server, since there was one server is down  \n";
+                    logger(&logMessage[0]);
+                }
             }
+            return 0;
         }
+        else {
+
+            if (onlinePeersServerCount == peersSocketDescriptorNOnlinestatus.size()) {
+                
+                for (auto& it : peersSocketDescriptorNOnlinestatus) {  // send pre-commit message to each online peer
+                    if (it.second == true) { // means the peer server is online
+                        
+                        std::string commitMessages = "";
+                        if (messageNumber == "") { // write opertation
+                            commitMessages = '/' + poster + '/' + message;
+                        } else { // replace operation
+                            commitMessages = messageNumber + '/' +  poster + '/' + message;
+                        }
+                        send(it.first, &commitMessages[0], commitMessages.size(), 0);
+                        if (D) {
+                            std::string logMessage = "Commit phase: master server sends commit and necessary data: " + commitMessages + " to all the peers slave server \n";
+                            logger(&logMessage[0]);
+                        }
+                        
+                        it.second = false; // set back to init value
+                    }
+                }
+                
+                struct timeval timeout;
+                timeout.tv_sec = 3;
+                timeout.tv_usec = 0;
+                
+                char secondCommitResponse[256];
+                int successCommitedPeersServerCount = 0;
+                int abortedCount = 0;
+                for (auto& it : peersSocketDescriptorNOnlinestatus) {  // send pre-commit message to each online peer
+                    if (setsockopt(it.first, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
+                    {
+                        std::cout << "Timeout error" << std::endl;
+                        return 0;
+                    }
+                    while (recv(it.first, secondCommitResponse, sizeof(secondCommitResponse), 0) > 0) {
+                        if (D) {
+                            char msg[256];
+                            snprintf(msg, 256, "Commit phase: master server sends commit and necessary data: %s to all the peers slave server \n", secondCommitResponse);
+                            logger(msg);
+                        }
+                        if (strcmp(secondCommitResponse, "ABORT") == 0) {
+                            abortedCount++;
+                        }
+                        successCommitedPeersServerCount++;
+                        it.second = true;
+                    }
+                }
+                
+                
+                
+                
+            }
+            
+        }
+        
+        
         
         return 1;
     }
