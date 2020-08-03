@@ -15,13 +15,22 @@ At the beginning of the interaction the master server send the above text(as pre
 Commit Stage:
 Commit messages.
 
-    
     commit success
     This message is postive acknowledgment returned by the slave server. When master server receive all the success status, the master server do the write or replace operation and all slave server will do the replace or write operation too.
     ABORT
     This message is negative acknowledgment returned by the slave server. When master server receive one of the abort status, the master server will not go to next stage, it will broadcast this negative status to all the slave servers. Let those slave server who did the write or replace operation undo them.
 
-    
+
+Algorithm :
+    the detail implementation of two phase commit:
+        Precommit Stage:
+        
+        First the master server will send a vote messages to all the peers to collect all the peers status, when all the peers give back a postive feedback the master server to continue to the next step otherwise, it will broadcast a "abort" messages to all the slave server, slave server will go back to idle state when receives aborted messages.
+        
+        Commit Stage:
+        
+        When the master server collected all the "ready" status from all the slave server, it will send the necessary data to the peers, the peers will receive them and try to store them in their bbfile, when finishes, it will send back a feedback to master server, when the master server receives all the "commit success" status from every one, it will give back the client write resutl if not, the master server will broadcast an "abort" messages to all the slave server, the slave server who has already store the message will have to delete them.
+
     
     
     

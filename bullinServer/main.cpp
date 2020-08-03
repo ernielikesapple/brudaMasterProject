@@ -386,14 +386,8 @@ void* threadFunctionUsedByThreadsPool(void *arg) {
 }
 
 
-/*
- * Repeatedly receives requests from the client and responds to them.
- * If the received request is an end of file or "quit", terminates the
- * connection.  Note that an empty request also terminates the
- * connection.  Same as for the purely iterative or the multi-process
- * server.
- */
-void* do_client (int sd) {
+ 
+void* do_client (int sd) { // Repeatedly receives requests from the client and responds to them. If the received request is an end of file or "quit", terminates the connection.
     
     pthread_mutex_lock(&currentBusyThreads_mutex);
     currentBusyThreads.push_back(pthread_self());

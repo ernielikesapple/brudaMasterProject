@@ -163,16 +163,8 @@ const int err_listen  = -6;
 
 
 
-    // 1.3 The Bulletin Board File
-    /*
-     * The structure implementing the access restrictions for a file.
-     * Also contains the file descriptor for the file (for easy access)
-     * and the name of the thing.
-     *
-     * The access control to files is implemented using a condition
-     * variable (basically, one can access the file iff nobody writes to
-     * it).
-     */
+    // 1.3 The Bulletin Board File The structure implementing the access restrictions for a file. The access control to files is implemented using a condition variable , one can access the file iff nobody writes to it
+    
     static struct rwexcl_t {
         pthread_mutex_t mutex;      // mutex for the whole structure
         pthread_cond_t can_write;   // condition variable, name says it all

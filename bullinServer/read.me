@@ -1,18 +1,32 @@
+All the collaborators:     Hang Cheng   002263996          ,     Tian, Pei,                Ngantung, Edmond Hendrik Jacob  002258356
+Email addess:  Hang Cheng: hcheng19@ubishops.ca     Tian, Pei: tpallen182@gmail.com     Ngantung, Edmond Hendrik Jacob: ENGANTUNG19@UBishops.ca
+-----------------------------------------------------------------------------------
+
 Notice:
-1. Please pay attention to the format of bbfilec.conf, specify value only in one line!!! strictly followed rule
-2. When testing the phase two, the sync orocess maybe a bit slow, especially if there are big list of peers, on the client side you can push return button on the keyboard mutilple times to refresh the status 
+1. the signal handling part signal hup is a bit buggy, so please test that part at the very end. So for restarting the program to test different funciton purposes
+   Temporarily using lsof -nPi | grep LISTEN to see the pid
+   Then using kill -9 pid to see all the program then restart it again using the command lines switches you want!!!!!!!!
 
-2.if on the bbserv.log or terminal keep getting "accept: Bad file descriptor" error, use "lsof -nPi | grep LISTEN" command to check the current listenning port,
+2. For the phase 1, when testing the multi access control using -d,  the client end will feel a visible delay, so on the client side, please keep enter "enter or return" button on the keyboard to refresh the status to see the final result!!!!!!
+
+3. For the phase 2, the client end will feel a visible delay , I have tested on linux.ubishops.ca if running 1 master server and 3 backup peers server,
+A write operation will take around 1 minute so does replace, so on the client side, please keep enter "enter or return" button on the keyboard to refresh the status to see the final result! When testing the phase two, the sync process maybe a bit slow, especially if there are big list of peers, on the client side you can push return button on the keyboard mutilple times to refresh the status
+
+4. Please pay attention to the format of bbfile.conf, specify value only in one line!!! strictly followed rule in the pdf
+
+5.if on the bbserv.log or terminal keep getting "accept: Bad file descriptor" error, use "lsof -nPi | grep LISTEN" command to check the current listenning port,
 kill the process current using the same port!!!!
+6.before running the server, please make the config file is named like "bbserv.config"
+7.if you want to make the server run as a daemon service in linux/unix, make sure inside the bbserv.config file, rename the key value pair , "DAEMON = true" , like this.
 
 
-notice:
-1.before running the server, please make the config file is named like "bbserv.config"
-2.if you want to make the server run as a daemon service in linux/unix, make sure inside the bbserv.config file, rename the key value pair , "DAEMON = true" , like this.
+
+--------------------------------------------------
+User guide:
 
 to start the server
 1. cd current directory on terminal
-2. run command "make clean"
+2. run command "make clean" or "make distclean", better make distclean, will clean more properly
 3. run command "make"
 4. run "./bbserv" (for more start up options , type "./bbserv -h")
 
@@ -32,12 +46,10 @@ to stop the client
 1. control + c
 
 
-
 check the port is being used:
 1. to find out what process has a port open, run command "sudo lsof -nPi :yourPortNumber"
 2. close the port, run command "sudo kill -9 yourPIDnumber"
 3. see all listening ports' info: sudo lsof -nPi | grep LISTEN
-
 
 
 debugging on linux.ubishops.ca:
@@ -47,15 +59,84 @@ step1 deploy the server
 2. then choose ssh way to log into linux.ubishops.ca, username: firstname first letter plus lastname, for example like my name : hang(first name) cheng (last name),
 then the username is hcheng, password is "CS" plus your studentID.
 3. upload the code into your own folder
+4. there are two ways to see the debug messages.
+    case 1: running as a daemon service:
+    1.start the server using commands ./bbserv -d
+    2.check all the standard output in the file: bbfile.log
+    
+    case 2: not running as a daemon service:
+    1.start the server using commands ./bbserv -d -f
+    2.check all the standard output in the terminal windows.
 
 step2 start the server and the client
 1. repeat the previous step in the read.me to start the server
-2. cd under the folder "triv_client", start the client.
-
+2. cd under the folder "client", start the client.
 
 
 to check the daemon service pid (process id):
 1. to check the daemon service is up : "ps aux" or "ps aux | grep yourDaemonServicePid"     #you can find yourDaemonServicePid inside the "bbserv.pid" after each successful server start up
+
+
+----------------------------------------------
+ descriptions all the algorithms used by your code which were not given in the handout.
+ 
+ I faced so many challenges in this project 1: below are the challenges I faced and how I solve them using the corresponding code locaed the file
+ 
+ First challenge is how to implement requirements in 3.1. How to detect the switch command line arguments
+ from the command lines and non swich command lines, and using them interract with bbserv.conf.
+ 1. the code handling command line switches is around main.cpp line 129 ~ 256.
+ 2. the code handling file interraction is mainly covered in the file: ConfigFileHandler.cpp
+ 
+ 
+ Second challenge I faced is how to make this progam a daemon service:
+ 1. the code handling daemon service is around main.cpp line: 781 ~ 835 , mainly in the function void daemonize()
+ 
+
+ Third challenge I faced is how to set up a server and client paradigm: to communicate with each others. This is the step 1, step two is how to let one server interract with
+ mutilple clients using multithread strategy:
+ 1. the code is mainly in main.cpp line 302 ~ 342 , in the function void*  startServer(void *arg)
+ 
+ 
+ Fourth challenge I faced is how to set up a pre-allocated thread pool, and when there are client coming, the thread is going to take the task from idle state
+ 1. the code is mainly in main.cpp line 325 ~ 334. This part is to create thread pool
+ 2. main.cpp line 349 ~ 353, this part is to take a task into the queue, if a new client is coming
+ 3. main.cpp line 363 ~ 386 , this part is mainly how each idle thread is going to handle the task, whenever there is a client in the queue, logic mainly in void* threadFunctionUsedByThreadsPool(void *arg) {}
+ 
+
+ Fifth challenge I faced is how to handle the siganls with the server is running as a daemon service, espeically the part with retart, this related to using gdb debugger to check info threads, to see how each thread behaves after start up and restart, how to properly terminate all the threads with tasks and restart them properly. Once the server is up, there are threads is blocked on accept, there are threads blocked on read(), there are threads are idle, so I have to handle all the properly when the restart part comes, have to shutdown all the master socket, and terminate all the threads in the threadpool, and restart them again. This part is still a bit buggy.
+ 1. the code mainly around main.cpp line 618 ~ 688 inside void signalHandlers(int sig).
+ 
+ Sixth challenge I faced is how to handle the protocal in the 1.1 to interract with client,
+ 1.  the code mainly around main.cpp line 624 ~ 694. void* do_client (int sd)
+
+ Seventh challenge I faced is how to handle mutiple client try to access the same bbfile, the part of access control.
+ I also use a struct flocks to record the current mutex and  mutex condition  for writing and a var to record the current reader for the bbfile,
+ whenever there are readers the write operation is wait on  mutex condition: can_write, when there all the read operations are done, it will broadcast this to all the
+ waiting threads so that write can keep going.
+ 1. the code is inside TcpUtils.cpp:
+ std::string bbfileReader (std::string filename, std::string messageNumber);
+ std::string bbfileWritter (std::string filename, std::string poster, std::string message);
+ std::string bbfileReplacer (std::string filename, std::string messageNumber, std::string newMessage, std::string newPoster);
+ 2. I also featured a debug facility to mock the crowed write and read condition by using sleep, run the bbserv by ./bbserv -d , you will see the output in bbserv.conf
+ When there are mutilple clients read and write at the same time.
+ 
+ Eighth challenge I faced is how to handle the peers data properly in the bbserv.conf, load them properly into main.cpp
+ 1. I have used a  std::vector<std::pair<std::string, int> > peersHostNPortVector to load the list, the prioty is if there are list in the bbserv.conf use them if they override by the command line non-switch arguements , use the list from command line.
+ 2. code is mainly around in the main.cpp :218 ~ 252, and 704 ~ 748
+ 
+ Ninth challenge I faced is how to do the peers communitcation and implement the phase 2 properly,
+ 1. I have to turn the bbserv to a client or a master server when it receives a write or replace operations, the code is in the function int connectToAllthePeersForSyncronazation (std::string operationMethod, std::string messageNumber, std::string message, std::string poster), in main.cpp
+    to turn this bbserv to a client try to connect to the peers.
+ 2. for the peers server part, whenever the bbserv is up in the main.cpp there is thread is for the start up the slave server, the code is in function, in main.cpp
+ startUpSlaveServer
+ 3. the detail implementation of two phase commit: first the master server will send a vote messages to all the peers to collect all the peers status, when all the peers give
+ back a postive feedback the master server to continue to the next step otherwise, it will broadcast a "abort" messages to all the slave server, slave server will go back to idle state when receives aborted messages.  Above is the precommit stage, When the master server collected all the "ready" status from all the slave server, it will send the necessary data to the peers, the peers will receive them and try to store them in their bbfile, when finishes, it will send back a feedback to master server, when the master server receives all the "commit success" status from every one, it will give back the client write resutl if not, the master server will broadcast an "abort" messages to all the slave server, the slave server who has already store the message will have to delete them.
+ 
+ 
+ 
+ 
+ 
+
 
 
 
