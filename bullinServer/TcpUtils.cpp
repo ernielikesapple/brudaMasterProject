@@ -569,6 +569,96 @@ std::string bbfileWritterUsedWhenSynChronization (std::string filename, std::str
 
 
 
+std::string bbfileDeleterUsedWhenSynChronization (std::string filename, std::string messageNumber, std::string poster, std::string message) { // when receives aborted messages delete the written messages
+    // The fact that only one thread writes at any given time is ensured
+    // by the fact that the successful thread does not release the mutex
+    // until the writing process is done.
+    pthread_mutex_lock(&flocks.mutex);
+    // we wait for condition as long as somebody is doing things with
+    // the file
+    while (flocks.reads != 0) {
+        // release the mutex while waiting...
+        pthread_cond_wait(&flocks.can_write, &flocks.mutex);
+    }
+    // now we have the mutex _and_ the condition, so we write
+    
+    // notice don't return before hit the lines of code with mutex
+    std::string returnString = "";
+    
+    if (D) { // debug stand out put for testing access control
+        std::string logMessage = "beginning to DELETE message \n";
+        logger(&logMessage[0]);
+    }
+    
+    std::fstream bbFile;
+    bbFile.open(filename.c_str(),std::ios::in | std::ofstream::app);
+    if (bbFile.fail()) {
+        // done writing.
+        // this might have released the file for access, so we broadcast the
+        // condition to unlock whatever process happens to wait for us.
+        pthread_cond_broadcast(&flocks.can_write);
+        // we are done!
+        pthread_mutex_unlock(&flocks.mutex);
+        return "ERROR Delete can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
+    }
+    
+    std::string bbfileContainer = "";
+    
+    std::string line;
+    bool foundMessageNumber = false;
+    while ( getline (bbFile,line) )
+    {
+        std::string messageNumberInBbfile = line.substr(0, line.find("/"));
+        if (messageNumber == messageNumberInBbfile) {
+            line.clear();
+            foundMessageNumber = true;
+        }
+        bbfileContainer = bbfileContainer + line + "\n";
+    }
+    if (foundMessageNumber) {
+        returnString = "DELETE " + messageNumber;  // notice don't return before hit the lines of code with mutex
+        foundMessageNumber = false;
+    } else {
+        returnString = "UNKNOWN " + messageNumber + " can't find the designated message corresponding to this message number"; // notice don't return before hit the lines of code with mutex
+    }
+    bbFile.close();
+    
+    bbFile.open(filename.c_str(),std::ios::out);  // replace all the text in the text file again
+    if (bbFile.fail()) {
+        returnString = "Unable to find defaultConfig file 2";
+        // exit(0);
+    }
+    bbFile << bbfileContainer;
+    bbFile.close();
+    
+    if (D) { /* DEBUG_DELAY */
+        // ******************** TEST CODE ********************
+        // bring the write process to a crawl to figure out whether we
+        // implement the concurrent access correctly.
+        std::string logMessage = "debug DELETE delay 6 seconds begins \n";
+        logger(&logMessage[0]);
+        sleep(6);
+        std::string logMessage2 = "debug DELETE delay 6 seconds ends \n";
+        logger(&logMessage2[0]);
+        // ******************** TEST CODE DONE ***************
+    }
+    
+    // done writing.
+    // this might have released the file for access, so we broadcast the
+    // condition to unlock whatever process happens to wait for us.
+    pthread_cond_broadcast(&flocks.can_write);
+    // we are done!
+    pthread_mutex_unlock(&flocks.mutex);
+    
+    if (D) { // debug stand out put for testing access control
+       std::string logMessage = "end to DELETE message \n";
+       logger(&logMessage[0]);
+    }
+       
+    return returnString;
+}
+
+
 TcpUtils* TcpUtils::singleton = NUll_POINTER;
 TcpUtils* TcpUtils::newAInstance() {
     if (singleton == NUll_POINTER) {

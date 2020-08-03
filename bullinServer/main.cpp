@@ -517,8 +517,6 @@ void* do_client (int sd) {
             else {
                 std::string message(&req[nextArgIndex]);
                 
-                
-                
                 // logic for peers Synchronization
 
                 if (peersHostNPortVector.size() > 0) { // only wrote success, and there are peers , we will try to do the synchronizaiton,  after the sync process, if two phase commit fail, then update the ans message to the client, other wise remains the same
@@ -527,10 +525,9 @@ void* do_client (int sd) {
                     size_t positionOfCurrentMessageNumber = ans.find_first_of(' ');
                     std::string currentMessageNumber = ans.substr(positionOfCurrentMessageNumber + 1, (ans.length() - positionOfCurrentMessageNumber));
                     
-                    
                     int result = connectToAllthePeersForSyncronazation("write", currentMessageNumber, message, user.username);  // pass necessary message to
                     if (result == 0) {  //
-                        // TODO: perform delete operation on this local file
+                        bbfileDeleterUsedWhenSynChronization(bbfile, currentMessageNumber ,user.username, message); // abandon the written previous messages
                         ans = "ERROR WRITE can not sync all the message from client, due to the peers server synchronization error";
                     } else { // peers synchronization success, we perform the operation on the master server too
                         // ans = bbfileWritterUsedWhenSynChronization(bbfile, currentMessageNumber, user.username, message);
@@ -538,9 +535,6 @@ void* do_client (int sd) {
                 } else { // there is no peers specified in the config file or command line, we only perform one client one server operation
                     ans = bbfileWritter(bbfile, user.username, message);
                 }
-                
-                
-                
                 
             }
         }
@@ -558,14 +552,6 @@ void* do_client (int sd) {
                     std::string newMessage = messageNumberPlusMessage.substr(foundSlash + 1, messageNumberPlusMessage.length()); // + 1 to skip the orignal '/'
                     if (messageNumber.length()>0 && newMessage.length()>0) {
                         
-                        
-                        
-                        
-                        // TODO: add logic for synchronazition
-                        
-                        // logic for peers Synchronization
-
-                        
                         if (peersHostNPortVector.size() > 0) { // only wrote success, and there are peers , we will try to do the synchronizaiton,  after the sync process, if two phase commit fail, then update the ans message to the client, other wise remains the same
                              // TODO: add logic for synchronazition
                             int result = connectToAllthePeersForSyncronazation("replace",messageNumber, newMessage, user.username);  // pass necessary message to
@@ -578,9 +564,6 @@ void* do_client (int sd) {
                                 ans = bbfileReplacer(bbfile, messageNumber, newMessage, user.username);  // replace file
                         }
                         
-                        
-                        
-            
                     } else {
                         ans = "REPLACE command requires a proper format to continue, Format: 'REPLACE message-number/message'";
                     }
@@ -997,7 +980,6 @@ void* do_syncronazation (int sd) {
             std::string poster = posterNMessage.substr(0, foundSlash2);
             std::string message = posterNMessage.substr(foundSlash2 + 1, (posterNMessage.length() - poster.length()));
             
-            std::cout << "====messageNumber==========" << messageNumber << "---poster---" << poster << "---message-----" << message << std::endl;
             std::string operationResult = "";  // store commit messages
             if (operationMethod == "write") { // means it's a write operation
                 operationResult = bbfileWritterUsedWhenSynChronization(bbfile, messageNumber ,poster, message);
@@ -1011,28 +993,24 @@ void* do_syncronazation (int sd) {
                 send(sd, "ABORT", 256, 0);
             }
                 
-            // TODO: use the same structure above, check the response from master is it says finishs, then can return NULL
-                
-                
-                
-            
-            
-            
-            
+            char commitMessagesFeedback[256];
+            read(sd, commitMessagesFeedback, sizeof(commitMessagesFeedback));  // read all the commit messages if ok return NULL, if not abondan the previous write/replace operation
+            if (D) {
+               char msg[256];
+               snprintf(msg, 256, "Commit phase: slave server receives commit messages Response :  %s from master server \n", commitMessagesFeedback);
+               logger(msg);
+            }
+
+            if ((strcmp(commitMessagesFeedback, "ABORT")) == 0) {
+                bbfileDeleterUsedWhenSynChronization(bbfile, messageNumber ,poster, message); // abandon the written previous messages
+                return NULL;
+            }
+            else if ((strcmp(commitMessagesFeedback, "ABORT")) != 0) {
+                return NULL;
+            }
         }
         
-        
-        
-        
-        // read all the commit messages if ok return NULL, if not abondan the previous write/replace operation
-
-        
-        
-        
         return NULL;
-        
-        
-        
     }
     
     close(sd);
@@ -1041,10 +1019,6 @@ void* do_syncronazation (int sd) {
 }
 
 
-
-
-
-// TODO: add another function twoPhaseCommitHandler () {} used when the client sends write or replace commands
 int connectToAllthePeersForSyncronazation (std::string operationMethod, std::string messageNumber, std::string message, std::string poster) {  //
     
     std::vector<std::pair<int, bool> > peersSocketDescriptorNOnlinestatus;
@@ -1091,8 +1065,7 @@ int connectToAllthePeersForSyncronazation (std::string operationMethod, std::str
         int onlinePeersServerCount = 0;
         int abortedCount = 0;
         for (auto& it : peersSocketDescriptorNOnlinestatus) {  // send pre-commit message to each online peer
-            if (setsockopt(it.first, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
-            {
+            if (setsockopt(it.first, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
                 std::cout << "Timeout error" << std::endl;
                 return 0;
             }
@@ -1149,15 +1122,14 @@ int connectToAllthePeersForSyncronazation (std::string operationMethod, std::str
                 }
                 
                 struct timeval timeout;
-                timeout.tv_sec = 3;
+                timeout.tv_sec = 6.5;
                 timeout.tv_usec = 0;
                 
                 char secondCommitResponse[256];
                 int successCommitedPeersServerCount = 0;
                 int abortedCount = 0;
                 for (auto& it : peersSocketDescriptorNOnlinestatus) {  // send pre-commit message to each online peer
-                    if (setsockopt(it.first, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
-                    {
+                    if (setsockopt(it.first, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
                         std::cout << "Timeout error" << std::endl;
                         return 0;
                     }
@@ -1174,18 +1146,38 @@ int connectToAllthePeersForSyncronazation (std::string operationMethod, std::str
                         it.second = true;
                     }
                 }
-                
-                // TODO: using same structure above to perform, if one peers fail, broacast abort, else return 1
-                
-                
-                
+                                
+                if (abortedCount > 0) { // there is at least one server is aborted
+                    char arr[] = "ABORT";
+                    for (auto& it : peersSocketDescriptorNOnlinestatus) {  // broadcast abort messages to all the peers
+                        send(it.first, arr, sizeof(arr), 0);
+                        if (D) {
+                            std::string logMessage = "Commit phase: master server broadcast the ABORT message to all the peers slave server, since there was one server can not perform write or replace operation \n";
+                            logger(&logMessage[0]);
+                        }
+                    }
+                    return 0;
+                }
+                else {
+                    if (successCommitedPeersServerCount == peersSocketDescriptorNOnlinestatus.size()) {
+                        // receives all the messages from slaveServers and return.
+                        return 1;
+                    } else {
+                        char arr[] = "ABORT";
+                        for (auto& it : peersSocketDescriptorNOnlinestatus) {  // broadcast abort messages to all the peers
+                            send(it.first, arr, sizeof(arr), 0);
+                            if (D) {
+                                std::string logMessage = "Commit phase: master server broadcast the ABORT message to all the peers slave server, since there was one server can not perform write or replace operation \n";
+                                logger(&logMessage[0]);
+                            }
+                        }
+                        return 0;
+                    }
+                }
             }
             
         }
         
-        
-        
-        return 1;
     }
   
     return 0;
