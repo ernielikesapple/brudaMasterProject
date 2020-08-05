@@ -210,11 +210,11 @@ int main(int argc, char** argv) {
     std::string peersString = ""; // use a string to append/take all the values from argv[i] , and then after the while loop take everything into the config file
     argc -= optind - 1;
     argv += optind - 1;
+    peersHostNPortVector.clear(); // clean the value from last time use the latest value from command line
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "") != 0) {
             std::string peerStringRaw = argv[i];
             size_t found  = peerStringRaw.find(":");
-            peersHostNPortVector.clear(); // clean the value from last time use the latest value from command line
             // check if the non-switch argument are not meet the requirements of host:port, we need to exits
             if (found != std::string::npos) { // check the host and port are in the correct format
                 std::string domainRaw = peerStringRaw.substr(0, found); // check if host is valide
@@ -515,8 +515,7 @@ void* do_client (int sd) { // Repeatedly receives requests from the client and r
                 if (peersHostNPortVector.size() > 0) { // only wrote success, and there are peers , we will try to do the synchronizaiton,  after the sync process, if two phase commit fail, then update the ans message to the client, other wise remains the same
                      // TODO: add logic for synchronazition
                     ans = bbfileWritter(bbfile, user.username, message);
-                    size_t positionOfCurrentMessageNumber = ans.find_first_of(' ');
-                    std::string currentMessageNumber = ans.substr(positionOfCurrentMessageNumber + 1, (ans.length() - positionOfCurrentMessageNumber));
+                    std::string currentMessageNumber = ans.substr(10, (ans.length() - 10)); // to skip "3.0 WROTE "
                     
                     int result = connectToAllthePeersForSyncronazation("write", currentMessageNumber, message, user.username);  // pass necessary message to
                     if (result == 0) {  //
@@ -1032,6 +1031,15 @@ int connectToAllthePeersForSyncronazation (std::string operationMethod, std::str
         if (sd < 0) {
            perror("connectbyport");
            return 0;
+        }
+        
+        struct timeval timeout;
+        timeout.tv_sec = 3.0;
+        timeout.tv_usec = 0;
+        
+        if (setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+            std::cout << "Timeout error" << std::endl;
+            return 0;
         }
         
         peersSocketDescriptorNOnlinestatus.push_back(std::make_pair(sd,true));
