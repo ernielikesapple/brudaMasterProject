@@ -23,8 +23,8 @@
 char const* app_name = "bbserv";
 std::string configFileName = "bbserv.conf";
 std::string Tmax = "20";   // keyValue in the config file: THMAX   // use stoi(), change int to string
-std::string bp = "9000";   // keyValue in the config file: BBPORT , port number for client server communication
-std::string sp = "10000";  // keyValue in the config file: SYNCPORT,  port number for server server communication
+std::string bp = "9000";   // keyValue in the config file: BBPORT , port number for client server communication, specified by -p using command line switches
+std::string sp = "10000";  // keyValue in the config file: SYNCPORT,  port number for server server communication, specified by -s using command line switches
 std::string bbfile = "bbfile";   // keyValue in the config file: BBFILE               // config fileName mandatory data if it's empty then refuse to start the server,
 std::string peers = "";    // keyValue in the config file: PEERS
 std::vector<std::pair<std::string, int> > peersHostNPortVector;
@@ -129,20 +129,16 @@ int main(int argc, char** argv) {
     while ( (option = getopt(argc, argv, "b:c:T:t:p:s:fdh")) != -1 ) {  // for each option...
         switch ( option ) {
             case 'b':  // change bbfile name
-                std::rename(bbfile.c_str(), optarg);
-                configFileHandler -> configFileModifier(configFileName,"BBFILE",optarg); // insert the new name inside the config file
                 bbfile = optarg;
                 break;
             case 'c':  // change config file name
-                std::rename(configFileName.c_str(), optarg);
-                configFileName = optarg; // TODO: VERIFY THIS with the signalhug part again insert the new value into this configFile variable so that when reload it will use the new name
+                configFileName = optarg;
                 break;
             case 'T': { // overide Tmax number, preallocated threads
                 std::string switchValue = optarg;
                 std::string::const_iterator itForTRaw = switchValue.begin();
                 while (itForTRaw != switchValue.end() && std::isdigit(*itForTRaw)) {++itForTRaw;}
                 if(!switchValue.empty() && itForTRaw == switchValue.end()) { // check all the ports are digits
-                    configFileHandler -> configFileModifier(configFileName,"THMAX",optarg);
                     Tmax = optarg;
                     break;
                 } else {
@@ -156,7 +152,6 @@ int main(int argc, char** argv) {
                 std::string::const_iterator itForTRaw = switchValue.begin();
                 while (itForTRaw != switchValue.end() && std::isdigit(*itForTRaw)) {++itForTRaw;}
                 if(!switchValue.empty() && itForTRaw == switchValue.end()) { // check all the ports are digits
-                    configFileHandler -> configFileModifier(configFileName,"THMAX",optarg);
                     Tmax = optarg;
                     break;
                 } else {
@@ -170,7 +165,6 @@ int main(int argc, char** argv) {
                 std::string::const_iterator itForPortRaw = switchValue.begin();
                 while (itForPortRaw != switchValue.end() && std::isdigit(*itForPortRaw)) {++itForPortRaw;}
                 if(!switchValue.empty() && itForPortRaw == switchValue.end()) { // check all the ports are digits
-                    configFileHandler -> configFileModifier(configFileName,"BBPORT",optarg);
                     bp = optarg;
                     break;
                 } else {
@@ -184,7 +178,6 @@ int main(int argc, char** argv) {
                 std::string::const_iterator itForPortRaw = switchValue.begin();
                 while (itForPortRaw != switchValue.end() && std::isdigit(*itForPortRaw)) {++itForPortRaw;}
                 if(!switchValue.empty() && itForPortRaw == switchValue.end()) { // check all the ports are digits
-                    configFileHandler -> configFileModifier(configFileName,"SYNCPORT",optarg);
                     sp = optarg;
                     break;
                 } else {
@@ -194,11 +187,9 @@ int main(int argc, char** argv) {
                 break;
             }
             case 'f':   // start daemon...
-                configFileHandler -> configFileModifier(configFileName,"DAEMON","false");
                 d = false;
                 break;
             case 'd':   // debug mode...
-                configFileHandler -> configFileModifier(configFileName,"DEBUG","true");
                 D = true;
                 break;
             case '?':  // unknown option...
@@ -251,12 +242,20 @@ int main(int argc, char** argv) {
         }
     }
     
-    if (peersString.length() != 0) {
-        configFileHandler -> configFileModifier(configFileName,"PEERS",peersString);
+      // reload everything after config
+    // TODO: change the value in the config file if the value for d is true then we need to start the server
+    
+    
+    // if the server cannot obtain the file name from either the configuration file or the command line (see below) then it must refuse to start (with a suitable error message printed to the standard output).
+    if (!std::ifstream(bbfile)) { // make sure the bbfile exist, so the server can start up normally
+        std::cerr << "bbfile Not provided! Notice you must have a bbfile under current directory and Notice you should name the bbfile file like 'bbfile'  or you should specify the bbfile name you want using command line switches like './bbserv -b yourBBfileName '" << std::endl;
+        exit(0);
     }
     
-    loadConfigFile();  // reload everything after config
-    // TODO: change the value in the config file if the value for d is true then we need to start the server
+    if (configFileName != "bbserv.conf") { // using the new config file name provided by the command line switches
+        loadConfigFile();
+    }
+    
             
     if (d) { // daemonizing
         daemonize();
@@ -436,7 +435,7 @@ void* do_client (int sd) { // Repeatedly receives requests from the client and r
         
         if ( strncasecmp(req,"QUIT",strlen("QUIT")) == 0 ) {  // The strncasecmp() function is similar, except it only compares the first n bytes of req.
             
-            send(sd,"BYE see you next time\r\n", strlen("BYE see you next time\r\n"),0);
+            send(sd,"4.0 BYE see you next time\r\n", strlen("BYE see you next time\r\n"),0);
             
             printf("Received quit, sending EOF.\n");
             shutdown(sd,1);
@@ -487,7 +486,7 @@ void* do_client (int sd) { // Repeatedly receives requests from the client and r
                 } else {
                     std::string username(&req[nextArgIndex]);
                     user.username = username;
-                    ans = "HELLO " + username + " welcome to bbserv";
+                    ans = "1.0 HELLO " + username + " welcome to bbserv";
                 }
             }
         }
@@ -495,7 +494,7 @@ void* do_client (int sd) { // Repeatedly receives requests from the client and r
         else if (strncasecmp(req,"READ",strlen("READ")) == 0 ) {
             int nextArgIndex = next_arg(req,' ');
             if (nextArgIndex == -1) {
-                ans = "READ command requires a message number, Format: 'READ message-number'";
+                ans = "2.2 ERROR READ command requires a message number, Format: 'READ message-number'";
             }
             else {
                 std::string messageNumber(&req[nextArgIndex]);
@@ -506,7 +505,7 @@ void* do_client (int sd) { // Repeatedly receives requests from the client and r
         else if (strncasecmp(req,"WRITE",strlen("WRITE")) == 0 ) {
             int nextArgIndex = next_arg(req,' ');
             if (nextArgIndex == -1) {
-                ans = "WRITE command requires a message, Format: 'WRITE message'";
+                ans = "3.2 ERROR WRITE command requires a message, Format: 'WRITE message'";
             }
             else {
                 std::string message(&req[nextArgIndex]);
@@ -675,6 +674,12 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
             
         loadConfigFile(); // reload the config file
         
+        // if the server cannot obtain the file name from either the configuration file or the command line (see below) then it must refuse to start (with a suitable error message printed to the standard output).
+        if (!std::ifstream(bbfile)) { // make sure the bbfile exist, so the server can start up normally
+           std::cerr << "bbfile Not provided! Notice you must have a bbfile under current directory and Notice you should name the bbfile file like 'bbfile'  or you should specify the bbfile name you want using command line switches like './bbserv -b yourBBfileName '" << std::endl;
+           exit(0);
+        }
+        
         pthread_create(&clientServerThread, NULL, startServer, NULL);
         pthread_create(&slaveServerThread, NULL, startUpSlaveServer, NULL);
         
@@ -696,11 +701,7 @@ void loadConfigFile() {
         configFileHandler ->configFileValueGetter("BBPORT", bp);
         configFileHandler ->configFileValueGetter("SYNCPORT", sp);
         configFileHandler ->configFileValueGetter("BBFILE", bbfile);
-        if (!std::ifstream(bbfile)) { // make sure the bbfile exist, so the server can start up normally
-            std::cerr << "bbfile Not provided! Notice you must have a bbfile under current directory and Notice you should name the bbfile file like 'bbfile' " << std::endl;
-            exit(0);
-        }
-        
+    
         configFileHandler ->configFileValueGetter("PEERS", peers);
         peersHostNPortVector.clear(); // clean the value from last time use the latest value from config file
         if (strcmp(peers.c_str(), "") != 0) {  // check the peers are all in the valide format and to verify the value inside the server function make sure it has value
@@ -766,8 +767,9 @@ void loadConfigFile() {
             D = false;
         }
     } else {
-        std::cerr << "config file Not provided! Notice you should name the config file like 'bbserv.conf' " << std::endl;
-        exit(0);
+        if (D) {
+            std::cout << "config file Not provided! Will try to find the config from command line switches arguments" << std::endl;
+        }
     }
 }
 
@@ -981,7 +983,7 @@ void* do_syncronazation (int sd) {
                 operationResult = bbfileReplacer(bbfile, messageNumber, message, poster);  // replace file
             }
             
-            if (strncasecmp(operationResult.c_str(),"WROTE",strlen("WROTE")) == 0 ) { // operation sucess
+            if (strncasecmp(operationResult.c_str(),"3.0 WROTE",strlen("3.0 WROTE")) == 0 ) { // operation sucess
                 send(sd, "commit Sucess", 256, 0);
             } else {
                 send(sd, "ABORT", 256, 0);

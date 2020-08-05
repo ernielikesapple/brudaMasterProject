@@ -286,7 +286,7 @@ std::string bbfileReader (std::string filename, std::string messageNumber) {
         if (flocks.reads == 0)
             pthread_cond_broadcast(&flocks.can_write);
         pthread_mutex_unlock(&flocks.mutex);
-        return "ERROR READ can't find designated file (bbfile)";
+        return "2.2 ERROR READ can't find designated file (bbfile)";
     }
     if (D) { // debug stand out put for testing access control
        std::string logMessage = "beginning to read message \n";
@@ -299,10 +299,10 @@ std::string bbfileReader (std::string filename, std::string messageNumber) {
         if (messageNumber == messageNumberInBbfile) {
             size_t foundSlash= line.find_first_of('/');
             std::string posterNmessage = line.substr(foundSlash+1, line.length());
-            returnString = "MESSAGE " + messageNumber + " " + posterNmessage; // notice don't return before hit the lines of code with mutex
+            returnString = "2.0 MESSAGE " + messageNumber + " " + posterNmessage; // notice don't return before hit the lines of code with mutex
             break;  // when found the message just get out the while and return the message
         } else {
-            returnString = "UNKNOWN " + messageNumber + " can't find the designated message corresponding to this message number"; // notice don't return before hit the lines of code with mutex
+            returnString = "2.1 UNKNOWN " + messageNumber + " can't find the designated message corresponding to this message number"; // notice don't return before hit the lines of code with mutex
         }
     }
     
@@ -312,7 +312,7 @@ std::string bbfileReader (std::string filename, std::string messageNumber) {
        // implement the concurrent access correctly.
        std::string logMessage = "debug read delay 3 seconds begins\n";
        logger(&logMessage[0]);
-       sleep(3);
+        sleep(1.5);
        std::string logMessage2 = "debug read delay 3 seconds ends\n";
        logger(&logMessage2[0]);
        // ******************** TEST CODE DONE ***************
@@ -364,7 +364,7 @@ std::string bbfileWritter (std::string filename, std::string poster, std::string
         pthread_cond_broadcast(&flocks.can_write);
         // we are done!
         pthread_mutex_unlock(&flocks.mutex);
-        return "ERROR WRITE can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
+        return "3.2 ERROR WRITE can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
     }
     
     if (D) { // debug stand out put for testing access control
@@ -377,7 +377,7 @@ std::string bbfileWritter (std::string filename, std::string poster, std::string
     ss << secondsSince1970;
     std::string uniqueMessageNumber = ss.str();
     bbFile << uniqueMessageNumber << "/" << poster << "/" << message << std::endl;
-    returnString = "WROTE " + uniqueMessageNumber;
+    returnString = "3.0 WROTE " + uniqueMessageNumber;
     
     if (D) { /* DEBUG_DELAY */
         // ******************** TEST CODE ********************
@@ -385,7 +385,7 @@ std::string bbfileWritter (std::string filename, std::string poster, std::string
         // implement the concurrent access correctly.
         std::string logMessage = "debug write delay 6 seconds begins \n";
         logger(&logMessage[0]);
-        sleep(6);
+        sleep(2.5);
         std::string logMessage2 = "debug write delay 6 seconds ends \n";
         logger(&logMessage2[0]);
         // ******************** TEST CODE DONE ***************
@@ -439,7 +439,7 @@ std::string bbfileReplacer (std::string filename, std::string messageNumber, std
         pthread_cond_broadcast(&flocks.can_write);
         // we are done!
         pthread_mutex_unlock(&flocks.mutex);
-        return "ERROR WRITE can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
+        return "3.2 ERROR WRITE can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
     }
     
     std::string bbfileContainer = "";
@@ -457,10 +457,10 @@ std::string bbfileReplacer (std::string filename, std::string messageNumber, std
         bbfileContainer = bbfileContainer + line + "\n";
     }
     if (foundMessageNumber) {
-        returnString = "WROTE " + messageNumber;  // notice don't return before hit the lines of code with mutex
+        returnString = "3.0 WROTE " + messageNumber;  // notice don't return before hit the lines of code with mutex
         foundMessageNumber = false;
     } else {
-        returnString = "UNKNOWN " + messageNumber + " can't find the designated message corresponding to this message number"; // notice don't return before hit the lines of code with mutex
+        returnString = "3.1 UNKNOWN " + messageNumber + " can't find the designated message corresponding to this message number"; // notice don't return before hit the lines of code with mutex
     }
     bbFile.close();
     
@@ -478,7 +478,7 @@ std::string bbfileReplacer (std::string filename, std::string messageNumber, std
         // implement the concurrent access correctly.
         std::string logMessage = "debug replace delay 6 seconds begins \n";
         logger(&logMessage[0]);
-        sleep(6);
+        sleep(2.5);
         std::string logMessage2 = "debug replace delay 6 seconds ends \n";
         logger(&logMessage2[0]);
         // ******************** TEST CODE DONE ***************
@@ -527,7 +527,7 @@ std::string bbfileWritterUsedWhenSynChronization (std::string filename, std::str
         pthread_cond_broadcast(&flocks.can_write);
         // we are done!
         pthread_mutex_unlock(&flocks.mutex);
-        return "ERROR WRITE can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
+        return "3.2 ERROR WRITE can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
     }
     
     if (D) { // debug stand out put for testing access control
@@ -536,7 +536,7 @@ std::string bbfileWritterUsedWhenSynChronization (std::string filename, std::str
     }
     
     bbFile << messageNumber << "/" << poster << "/" << message << std::endl;
-    returnString = "WROTE " + messageNumber;
+    returnString = "3.0 WROTE " + messageNumber;
     
     if (D) { /* DEBUG_DELAY */
         // ******************** TEST CODE ********************
@@ -544,7 +544,7 @@ std::string bbfileWritterUsedWhenSynChronization (std::string filename, std::str
         // implement the concurrent access correctly.
         std::string logMessage = "debug write delay 6 seconds begins \n";
         logger(&logMessage[0]);
-        sleep(6);
+        sleep(2.5);
         std::string logMessage2 = "debug write delay 6 seconds ends \n";
         logger(&logMessage2[0]);
         // ******************** TEST CODE DONE ***************
@@ -599,7 +599,7 @@ std::string bbfileDeleterUsedWhenSynChronization (std::string filename, std::str
         pthread_cond_broadcast(&flocks.can_write);
         // we are done!
         pthread_mutex_unlock(&flocks.mutex);
-        return "ERROR Delete can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
+        return "3.2 ERROR Delete can't find designated file (bbfile)"; // notice don't return before hit the lines of code with mutex
     }
     
     std::string bbfileContainer = "";
@@ -619,7 +619,7 @@ std::string bbfileDeleterUsedWhenSynChronization (std::string filename, std::str
         returnString = "DELETE " + messageNumber;  // notice don't return before hit the lines of code with mutex
         foundMessageNumber = false;
     } else {
-        returnString = "UNKNOWN " + messageNumber + " can't find the designated message corresponding to this message number"; // notice don't return before hit the lines of code with mutex
+        returnString = "3.1 UNKNOWN " + messageNumber + " can't find the designated message corresponding to this message number"; // notice don't return before hit the lines of code with mutex
     }
     bbFile.close();
     
@@ -637,7 +637,7 @@ std::string bbfileDeleterUsedWhenSynChronization (std::string filename, std::str
         // implement the concurrent access correctly.
         std::string logMessage = "debug DELETE delay 6 seconds begins \n";
         logger(&logMessage[0]);
-        sleep(6);
+        sleep(2.5);
         std::string logMessage2 = "debug DELETE delay 6 seconds ends \n";
         logger(&logMessage2[0]);
         // ******************** TEST CODE DONE ***************

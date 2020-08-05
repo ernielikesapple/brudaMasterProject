@@ -25,65 +25,66 @@ ConfigFileHandler* ConfigFileHandler::newAInstance() {
     return singleton;
 }
 
-void ConfigFileHandler::configFileModifier(string filename, string keyToBeSearched, string valueToBeFilled) {
-    fstream configFile;
-    configFile.open(filename.c_str(),ios::in);
-    if (configFile.fail()) {
-        cout << "Unable to find defaultConfig file 1" << endl;
-        exit(0);
-    }
-    string configFileContainer = "";
-    string delimeter = "=";
-    
-    string line;
-    while ( getline (configFile,line) )
-    {
-        if(line[0] == '#' || line.empty()) continue; // skip comment
-        size_t foundComments = line.find_first_of('#');  // if not find the # it will return a very large number so that the next line can the whole text,
-        string configStringInEachLine = line.substr(0, foundComments);
-        
-        // TODO: notic to have, add trim and reduce
-        string key, value;
-        unsigned long foundDelimeter = configStringInEachLine.find(delimeter);
-        if (foundDelimeter != string::npos) {
-            key  = configStringInEachLine.substr(0, foundDelimeter);
-            value = configStringInEachLine.substr(foundDelimeter+1);
-            
-            if (key == keyToBeSearched) {
-                // updat the value in the map!
-                map<string, string>::iterator it;
-                it = configDataMap.find(key);
-                if (it != configDataMap.end()) {
-                    it -> second = valueToBeFilled;
-                } else {
-                    cout << "Unable to find the key in the map varible, when updating the value" << endl;
-                }
-                    
-                // update the value in the file 1
-                if (value.length() > valueToBeFilled.length()) {
-                    line.replace(foundDelimeter+1, value.length(), valueToBeFilled);
-                } else {
-                    line.replace(foundDelimeter+1, valueToBeFilled.length(), valueToBeFilled);
-                }
-            }
-            // update the value in the file 2
-            configFileContainer = configFileContainer + line + "\n";
-        }
-    }
-    configFile.close();
-    
-    configFile.open(filename.c_str(),ios::out);  // replace all the text in the text file again
-    if (configFile.fail()) {
-        cout << "Unable to find defaultConfig file 2" << endl;
-        exit(0);
-    }
-    
-    configFile << configFileContainer;
-    configFile.close();
-    
-}
+//void ConfigFileHandler::configFileModifier(string filename, string keyToBeSearched, string valueToBeFilled) {
+//    fstream configFile;
+//    configFile.open(filename.c_str(),ios::in);
+//    if (configFile.fail()) {
+//        cout << "Unable to find defaultConfig file 1" << endl;
+//        exit(0);
+//    }
+//    string configFileContainer = "";
+//    string delimeter = "=";
+//    
+//    string line;
+//    while ( getline (configFile,line) )
+//    {
+//        if(line[0] == '#' || line.empty()) continue; // skip comment
+//        size_t foundComments = line.find_first_of('#');  // if not find the # it will return a very large number so that the next line can the whole text,
+//        string configStringInEachLine = line.substr(0, foundComments);
+//        
+//        // TODO: notic to have, add trim and reduce
+//        string key, value;
+//        unsigned long foundDelimeter = configStringInEachLine.find(delimeter);
+//        if (foundDelimeter != string::npos) {
+//            key  = configStringInEachLine.substr(0, foundDelimeter);
+//            value = configStringInEachLine.substr(foundDelimeter+1);
+//            
+//            if (key == keyToBeSearched) {
+//                // updat the value in the map!
+//                map<string, string>::iterator it;
+//                it = configDataMap.find(key);
+//                if (it != configDataMap.end()) {
+//                    it -> second = valueToBeFilled;
+//                } else {
+//                    cout << "Unable to find the key in the map varible, when updating the value" << endl;
+//                }
+//                    
+//                // update the value in the file 1
+//                if (value.length() > valueToBeFilled.length()) {
+//                    line.replace(foundDelimeter+1, value.length(), valueToBeFilled);
+//                } else {
+//                    line.replace(foundDelimeter+1, valueToBeFilled.length(), valueToBeFilled);
+//                }
+//            }
+//            // update the value in the file 2
+//            configFileContainer = configFileContainer + line + "\n";
+//        }
+//    }
+//    configFile.close();
+//    
+//    configFile.open(filename.c_str(),ios::out);  // replace all the text in the text file again
+//    if (configFile.fail()) {
+//        cout << "Unable to find defaultConfig file 2" << endl;
+//        exit(0);
+//    }
+//    
+//    configFile << configFileContainer;
+//    configFile.close();
+//    
+//}
 
 void ConfigFileHandler::configFileReader(std::string filename) {
+    configDataMap.clear();
     fstream configFile;
     configFile.open(filename.c_str(),ios::in);
     if (configFile.fail()) {

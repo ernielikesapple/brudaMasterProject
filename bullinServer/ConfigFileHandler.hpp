@@ -21,7 +21,7 @@ class ConfigFileHandler {
     public:
         static ConfigFileHandler* newAInstance();
         
-        void configFileModifier(std::string filename, std::string keyValueToBeSearched, std::string valueToBeFilled);
+//        void configFileModifier(std::string filename, std::string keyValueToBeSearched, std::string valueToBeFilled);
     
         void configFileReader(std::string filename);
         void configFileValueGetter(std::string key, std::string& value);  // passing a reference so that value will be changed directly
