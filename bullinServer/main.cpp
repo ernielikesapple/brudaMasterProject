@@ -92,6 +92,7 @@ pthread_t clientServerThread;  // communicate with client
 void*  startServer(void *arg);
 void closeServer();  // TODO: implement this function
 int currentMasterSocket;
+int currentSlaveSocket;
 /*
 * The function that implements the monitor thread.
 */
@@ -644,9 +645,12 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
     
     
     // Closes all the master sockets  // TODO: can't close master socket, since it's blocking on the
-     close(currentMasterSocket);   // why after cancel still can't close it?
-     shutdown(currentMasterSocket,1);
+    close(currentMasterSocket);   // why after cancel still can't close it?
+    shutdown(currentMasterSocket,1);
      
+    close(currentSlaveSocket);   // why after cancel still can't close it?
+    shutdown(currentSlaveSocket,1);
+    
 
     // wait for all threasd to exit, terminates all the preallocated threads
     
@@ -870,7 +874,8 @@ void*  startUpSlaveServer(void *arg) {  // receive the message from master serve
       // Note that the following are local variable, and thus not shared
       // between threads; especially important for ssock and client_addr.
       
-      long int msock, ssock;               // master and slave socket
+    int msock;
+      long ssock;               // master and slave socket
     
       struct sockaddr_in client_addr; // the address of the client...
       unsigned int client_addr_len = sizeof(client_addr); // ... and its length
@@ -881,7 +886,7 @@ void*  startUpSlaveServer(void *arg) {  // receive the message from master serve
           return NULL;
       }
       printf("back Server up and listening on port %d.\n", port);
-
+      currentSlaveSocket = msock;
       // Setting up the thread creation:
       pthread_t tt;                       // thread id
       pthread_attr_t ta;                  // thread attribute, need to initialize it
