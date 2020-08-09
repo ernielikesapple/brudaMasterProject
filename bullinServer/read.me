@@ -1,16 +1,15 @@
-All the collaborators:     Hang Cheng   002263996          ,     Tian, Pei,                Ngantung, Edmond Hendrik Jacob  002258356
+All the collaborators:     Cheng Hang    002263996          ,      Pei Tian 002255408,                Ngantung, Edmond Hendrik Jacob  002258356
 Email addess:  Hang Cheng: hcheng19@ubishops.ca     Tian, Pei: tpallen182@gmail.com     Ngantung, Edmond Hendrik Jacob: ENGANTUNG19@UBishops.ca
 -----------------------------------------------------------------------------------
 
 Notice:
-1. the signal handling part signal hup is a bit buggy, so please test that part at the very end. So for restarting the program to test different funciton purposes
+1. If there is a problem with the signal handling part signal hup, So for restarting the program to test different funciton purposes
    Temporarily using lsof -nPi | grep LISTEN to see the pid
    Then using kill -9 pid to see all the program then restart it again using the command lines switches you want!!!!!!!!
 
 2. For the phase 1, when testing the multi access control using -d,  the client end will feel a visible delay, so on the client side, please keep enter "enter or return" button on the keyboard to refresh the status to see the final result!!!!!!
 
-3. For the phase 2, the client end will feel a visible delay , I have tested on linux.ubishops.ca if running 1 master server and 3 backup peers server,
-A write operation will take around 1 minute so does replace, so on the client side, please keep enter "enter or return" button on the keyboard to refresh the status to see the final result! When testing the phase two, the sync process maybe a bit slow, especially if there are big list of peers, on the client side you can push return button on the keyboard mutilple times to refresh the status
+3. For the phase 2, the client end will feel a visible delay , please keep enter "enter or return" button on the keyboard to refresh the status to see the final result! When testing the phase two, the sync process maybe a bit slow, especially if there are big list of peers, on the client side you can push return button on the keyboard mutilple times to refresh the status
 
 4. Please pay attention to the format of bbfile.conf, specify value only in one line!!! strictly followed rule in the pdf
 
