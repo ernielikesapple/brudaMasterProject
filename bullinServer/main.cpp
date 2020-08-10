@@ -25,7 +25,7 @@ std::string configFileName = "bbserv.conf";
 std::string Tmax = "20";   // keyValue in the config file: THMAX   // use stoi(), change int to string
 std::string bp = "9000";   // keyValue in the config file: BBPORT , port number for client server communication, specified by -p using command line switches
 std::string sp = "10000";  // keyValue in the config file: SYNCPORT,  port number for server server communication, specified by -s using command line switches
-std::string bbfile = "bbfile";   // keyValue in the config file: BBFILE               // config fileName mandatory data if it's empty then refuse to start the server,
+std::string bbfile = "";   // keyValue in the config file: BBFILE               // config fileName mandatory data if it's empty then refuse to start the server,
 std::string peers = "";    // keyValue in the config file: PEERS
 std::vector<std::pair<std::string, int> > peersHostNPortVector;
 bool d = true;   // keyValue in the config file: DAEMON
@@ -248,10 +248,20 @@ int main(int argc, char** argv) {
     
     
     // if the server cannot obtain the file name from either the configuration file or the command line (see below) then it must refuse to start (with a suitable error message printed to the standard output).
-    if (!std::ifstream(bbfile)) { // make sure the bbfile exist, so the server can start up normally
+    if (bbfile == "") { // make sure the bbfile exist, so the server can start up normally
         std::cerr << "bbfile Not provided! Notice you must have a bbfile under current directory and Notice you should name the bbfile file like 'bbfile'  or you should specify the bbfile name you want using command line switches like './bbserv -b yourBBfileName '" << std::endl;
         exit(0);
     }
+    
+    if (!std::ifstream(bbfile)) {   
+        std::ofstream file(bbfile);
+        if (!file)
+        {
+             std::cout << "File could not be created" << std::endl;
+             return 0;
+        }
+    }
+    
     
     if (configFileName != "bbserv.conf") { // using the new config file name provided by the command line switches
         loadConfigFile();
@@ -677,10 +687,23 @@ void signalHandlers(int sig) { //TODO: Handle all the signals
             
         loadConfigFile(); // reload the config file
         
+        if (configFileName != "bbserv.conf") { // using the new config file name provided by the command line switches
+            loadConfigFile();
+        }
+        
         // if the server cannot obtain the file name from either the configuration file or the command line (see below) then it must refuse to start (with a suitable error message printed to the standard output).
-        if (!std::ifstream(bbfile)) { // make sure the bbfile exist, so the server can start up normally
-           std::cerr << "bbfile Not provided! Notice you must have a bbfile under current directory and Notice you should name the bbfile file like 'bbfile'  or you should specify the bbfile name you want using command line switches like './bbserv -b yourBBfileName '" << std::endl;
-           exit(0);
+        if (bbfile == "") { // make sure the bbfile NAME exist, so the server can start up normally
+            std::cerr << "bbfile Not provided! Notice you must have a bbfile under current directory and Notice you should name the bbfile file like 'bbfile'  or you should specify the bbfile name you want using command line switches like './bbserv -b yourBBfileName '" << std::endl;
+            exit(0);
+        }
+        
+        if (!std::ifstream(bbfile)) {
+            std::ofstream file(bbfile);
+            if (!file)
+            {
+                 std::cout << "File could not be created" << std::endl;
+                 exit(0);
+            }
         }
         
         pthread_create(&clientServerThread, NULL, startServer, NULL);
